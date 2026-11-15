@@ -1,0 +1,4000 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Зарплата">
+<meta name="theme-color" content="#090a10">
+<title>Календарь зарплат</title>
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%236366f1'/><path d='M35 30h30c4 0 8 3 8 8s-4 8-8 8H35m0-16v40m-5-20h22' stroke='white' stroke-width='6' stroke-linecap='round' stroke-linejoin='round' fill='none'/></svg>">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+:root {
+  --bg: #08090f;
+  --surface: #11131f;
+  --surface-hover: #181b2c;
+  --card: #141726;
+  --card2: #1b1f33;
+  --card3: #232842;
+  --border: rgba(255, 255, 255, 0.11);
+  --border-focus: rgba(99, 102, 241, 0.6);
+  --text: #ffffff;
+  --text-secondary: #e2e8f0;
+  --muted: #94a3b8;
+  --muted-dark: #64748b;
+  --accent: #6366f1;
+  --accent-light: #818cf8;
+  --accent-glow: rgba(99, 102, 241, 0.4);
+  --green: #10b981;
+  --green-glow: rgba(16, 185, 129, 0.3);
+  --red: #f43f5e;
+  --red-glow: rgba(244, 63, 94, 0.3);
+  --amber: #f59e0b;
+  --font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+}
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-family);
+  font-variant-numeric: tabular-nums;
+  overscroll-behavior: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Base App Layout */
+#app-root {
+  display: none; /* Hidden until passcode is successfully verified */
+  min-height: 100%;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: calc(84px + env(safe-area-inset-bottom));
+}
+
+/* ========================================================
+   OFFLINE BANNER
+   ======================================================== */
+.offline-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 9998;
+  padding: calc(12px + env(safe-area-inset-top)) 16px 12px;
+  background: linear-gradient(135deg, #f43f5e, #e11d48);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  box-shadow: 0 4px 20px rgba(244, 63, 94, 0.5);
+  transform: translateY(-100%);
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.offline-banner.show {
+  display: flex;
+  transform: translateY(0);
+}
+.offline-banner svg { flex-shrink: 0; }
+
+/* ========================================================
+   LOCK SCREEN (PASSCODE 11042006)
+   ======================================================== */
+.lockscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background: #08090f;
+  background-image: 
+    radial-gradient(circle at 50% 12%, rgba(99, 102, 241, 0.25), transparent 55%),
+    radial-gradient(circle at 85% 85%, rgba(139, 92, 246, 0.16), transparent 50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: calc(32px + env(safe-area-inset-top)) 24px calc(28px + env(safe-area-inset-bottom));
+  user-select: none;
+  -webkit-user-select: none;
+  transition: opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1), transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.lockscreen.unlocked {
+  opacity: 0;
+  transform: translateY(-40px) scale(0.97);
+  pointer-events: none;
+}
+
+.lock-top {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-top: 8px;
+}
+
+.lock-badge {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent-light);
+  margin-bottom: 16px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transition: transform 0.25s, color 0.25s, border-color 0.25s;
+  position: relative;
+}
+
+.lock-badge.success {
+  color: var(--green);
+  border-color: rgba(16, 185, 129, 0.5);
+  background: rgba(16, 185, 129, 0.12);
+  transform: scale(1.1);
+  box-shadow: 0 0 24px var(--green-glow);
+}
+
+.lock-title {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  color: #ffffff;
+}
+
+.lock-subtitle {
+  font-size: 14px;
+  color: var(--muted);
+  margin-top: 6px;
+}
+
+.pin-error-text {
+  font-size: 13px;
+  color: var(--red);
+  font-weight: 700;
+  min-height: 20px;
+  margin-top: 8px;
+  text-shadow: 0 0 12px var(--red-glow);
+}
+
+/* Pin indicator dots (8-digit passcode) */
+.pin-dots-container {
+  display: flex;
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.pin-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  background: transparent;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.pin-dot.filled {
+  background: #ffffff;
+  border-color: #ffffff;
+  box-shadow: 0 0 16px rgba(255, 255, 255, 0.9);
+  transform: scale(1.2);
+}
+
+.pin-dot.success {
+  background: var(--green);
+  border-color: var(--green);
+  box-shadow: 0 0 18px var(--green-glow);
+}
+
+.pin-dots-container.shake {
+  animation: shakeDots 0.45s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+@keyframes shakeDots {
+  10%, 90% { transform: translate3d(-3px, 0, 0); }
+  20%, 80% { transform: translate3d(5px, 0, 0); }
+  30%, 50%, 70% { transform: translate3d(-6px, 0, 0); }
+  40%, 60% { transform: translate3d(6px, 0, 0); }
+}
+
+/* ========================================================
+   LOADING ANIMATION AFTER PIN
+   ======================================================== */
+.pin-loading {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+}
+.pin-loading.show { display: flex; }
+.pin-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid rgba(255, 255, 255, 0.15);
+  border-top-color: var(--accent-light);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.pin-loading-text {
+  font-size: 13px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+/* Face ID button on lock screen */
+.faceid-wrap {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.faceid-btn {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: rgba(99, 102, 241, 0.15);
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  color: var(--accent-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s;
+  touch-action: manipulation;
+}
+.faceid-btn:active {
+  transform: scale(0.9);
+  background: rgba(99, 102, 241, 0.3);
+}
+.faceid-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.faceid-label {
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Keypad Grid (Mobile phone style) */
+.keypad-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px 22px;
+  width: 100%;
+  max-width: 300px;
+  margin-bottom: 12px;
+}
+
+.keypad-btn {
+  width: 76px;
+  height: 76px;
+  margin: 0 auto;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: background 0.15s, transform 0.08s, border-color 0.15s;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  outline: none;
+}
+
+.keypad-btn:active {
+  background: rgba(255, 255, 255, 0.26);
+  border-color: rgba(255, 255, 255, 0.4);
+  transform: scale(0.92);
+}
+
+.keypad-num {
+  font-size: 29px;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.keypad-letters {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: var(--muted);
+  margin-top: 4px;
+  text-transform: uppercase;
+}
+
+.keypad-action-btn {
+  width: 76px;
+  height: 76px;
+  margin: 0 auto;
+  border-radius: 50%;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  touch-action: manipulation;
+  font-size: 14px;
+  font-weight: 600;
+  transition: color 0.15s, transform 0.08s;
+}
+
+.keypad-action-btn:active {
+  color: #fff;
+  transform: scale(0.92);
+}
+
+/* ========================================================
+   APP HEADER
+   ======================================================== */
+.top-header {
+  padding: 14px 20px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.top-header .brand-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.top-header .brand-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--accent), #9333ea);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  box-shadow: 0 6px 16px var(--accent-glow);
+}
+
+.top-header h1 {
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  color: #ffffff;
+  line-height: 1.1;
+}
+
+.top-header .date-sub {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 3px;
+  text-transform: capitalize;
+  font-weight: 500;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.icon-btn-header {
+  width: 42px;
+  height: 42px;
+  border-radius: 13px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: all 0.15s;
+}
+
+.icon-btn-header:hover {
+  color: #ffffff;
+  background: var(--surface-hover);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.icon-btn-header:active {
+  transform: scale(0.92);
+}
+
+/* ========================================================
+   PAGES
+   ======================================================== */
+.page { display: none; animation: pageFadeIn .22s cubic-bezier(0.16, 1, 0.3, 1); }
+.page.active { display: block; }
+@keyframes pageFadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ========================================================
+   TODAY TAB
+   ======================================================== */
+.hero-card {
+  margin: 6px 18px 18px;
+  padding: 24px;
+  border-radius: 28px;
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 55%, #9333ea 100%);
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 18px 40px rgba(79, 70, 229, 0.42);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+}
+
+.hero-card::before {
+  content: '';
+  position: absolute;
+  top: -60%;
+  right: -30%;
+  width: 250px;
+  height: 250px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0) 70%);
+  pointer-events: none;
+}
+
+.hero-card .label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.hero-card .label {
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: rgba(255, 255, 255, 0.85);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.hero-card .amount {
+  font-size: 42px;
+  font-weight: 800;
+  margin-top: 10px;
+  letter-spacing: -1.2px;
+  color: #ffffff;
+  text-shadow: 0 3px 10px rgba(0,0,0,0.25);
+}
+
+.hero-card .bottom-row {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.22);
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.hero-card .stat-chip {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.18);
+  padding: 10px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(8px);
+}
+
+.hero-card .stat-chip .lbl {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.8);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 700;
+}
+
+.hero-card .stat-chip .val {
+  font-weight: 800;
+  font-size: 16px;
+  margin-top: 3px;
+  color: #ffffff;
+}
+
+.section-title {
+  padding: 18px 20px 10px;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.section-title .section-action {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent-light);
+  text-transform: none;
+  letter-spacing: 0;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: rgba(99, 102, 241, 0.12);
+}
+
+.section-title .section-action:active { transform: scale(0.94); }
+
+/* Mini Job balances */
+.job-balances {
+  margin: 0 18px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.jb-mini {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--card);
+  border-radius: 18px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.jb-mini:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.jb-mini:active {
+  transform: scale(0.98);
+}
+
+.jb-mini .jbm-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.jb-mini .jbm-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.jb-mini .jbm-name {
+  font-size: 15px;
+  font-weight: 800;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.jb-mini .jbm-sub {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.jb-mini .jbm-val {
+  font-size: 16px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.jb-mini .jbm-val.pos { color: var(--green); text-shadow: 0 0 12px var(--green-glow); }
+.jb-mini .jbm-val.neg { color: var(--red); text-shadow: 0 0 12px var(--red-glow); }
+
+/* Next shift card */
+.next-shift {
+  margin: 0 18px 18px;
+  background: var(--card);
+  border-radius: 22px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+
+.next-shift:active { transform: scale(0.98); }
+
+.next-shift-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.next-shift .badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 800;
+  padding: 6px 14px;
+  border-radius: 20px;
+}
+
+.next-shift .countdown {
+  font-size: 12px;
+  background: var(--card3);
+  padding: 6px 12px;
+  border-radius: 12px;
+  color: var(--text-secondary);
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.next-shift .shift-name {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  color: #ffffff;
+}
+
+.next-shift .shift-date {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+.next-shift .shift-sum {
+  font-size: 28px;
+  font-weight: 800;
+  margin-top: 14px;
+  letter-spacing: -0.5px;
+  color: var(--green);
+  text-shadow: 0 0 14px var(--green-glow);
+}
+
+.empty-card {
+  margin: 0 18px 18px;
+  padding: 30px 20px;
+  border-radius: 22px;
+  background: var(--card);
+  border: 1px dashed var(--border);
+  text-align: center;
+  color: var(--text-secondary);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.empty-card .empty-icon {
+  width: 50px;
+  height: 50px;
+  border-radius: 16px;
+  background: var(--card2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+}
+
+.empty-card .empty-txt {
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
+.empty-card .empty-btn {
+  margin-top: 4px;
+  padding: 10px 18px;
+  border-radius: 12px;
+  background: var(--surface-hover);
+  border: 1px solid var(--border);
+  color: var(--accent-light);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  touch-action: manipulation;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.empty-card .empty-btn:active {
+  transform: scale(0.95);
+}
+
+.list {
+  margin: 0 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.shift-item {
+  background: var(--card);
+  border-radius: 18px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform 0.15s, border-color 0.15s;
+}
+
+.shift-item:active {
+  transform: scale(0.97);
+}
+
+.shift-item:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.shift-color-bar {
+  width: 4px;
+  align-self: stretch;
+  border-radius: 4px;
+}
+
+.shift-icon-badge {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.shift-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.shift-info .name {
+  font-size: 15px;
+  font-weight: 800;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.shift-info .sub {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 3px;
+}
+
+.shift-amount {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--green);
+  white-space: nowrap;
+  text-shadow: 0 0 10px var(--green-glow);
+}
+
+.shift-amount.minus {
+  color: var(--red);
+  text-shadow: 0 0 10px var(--red-glow);
+}
+
+/* ========================================================
+   CALENDAR TAB
+   ======================================================== */
+/* Job Filter Bar in Calendar */
+.job-filter-bar {
+  margin: 0 18px 12px;
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: none;
+}
+.job-filter-bar::-webkit-scrollbar { display: none; }
+
+.job-filter-chip {
+  padding: 8px 16px;
+  border-radius: 20px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  touch-action: manipulation;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s;
+}
+
+.job-filter-chip.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+  box-shadow: 0 4px 14px var(--accent-glow);
+}
+
+.job-filter-chip:active {
+  transform: scale(0.94);
+}
+
+.month-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 18px 14px;
+}
+
+.month-nav button {
+  background: var(--card);
+  border: 1px solid var(--border);
+  color: var(--text);
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  cursor: pointer;
+  touch-action: manipulation;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.month-nav button:active {
+  background: var(--card2);
+  transform: scale(0.92);
+}
+
+.month-nav .title {
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: -0.4px;
+  text-transform: capitalize;
+  color: #ffffff;
+}
+
+.month-summary {
+  margin: 0 18px 14px;
+  padding: 16px;
+  background: var(--card);
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.month-summary .ms-col {
+  flex: 1;
+  text-align: center;
+}
+
+.month-summary .ms-col .ms-lbl {
+  font-size: 11px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+}
+
+.month-summary .ms-col .ms-val {
+  font-size: 16px;
+  font-weight: 800;
+  margin-top: 4px;
+}
+
+.month-summary .ms-col .ms-val.green { color: var(--green); }
+.month-summary .ms-col .ms-val.red { color: var(--red); }
+
+.calendar {
+  margin: 0 18px;
+  background: var(--card);
+  border-radius: 24px;
+  padding: 16px;
+  border: 1px solid var(--border);
+}
+
+.weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+.weekdays div {
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-weight: 800;
+  text-transform: uppercase;
+  padding: 4px 0;
+}
+
+.days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 5px;
+}
+
+.day {
+  aspect-ratio: 1;
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  touch-action: manipulation;
+  position: relative;
+  font-size: 15px;
+  font-weight: 700;
+  color: #ffffff;
+  transition: all 0.15s;
+  border: 1px solid transparent;
+  padding: 2px;
+}
+
+.day.empty { cursor: default; }
+
+.day.today {
+  border-color: var(--accent-light);
+  color: #ffffff;
+  box-shadow: 0 0 14px var(--accent-glow);
+  font-weight: 800;
+}
+
+.day.selected {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6) !important;
+  color: #ffffff !important;
+  border-color: #818cf8;
+  box-shadow: 0 6px 18px var(--accent-glow);
+  transform: scale(1.04);
+}
+
+.day.has-event {
+  background: var(--card2);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.day .daynum { line-height: 1; }
+.day .dots { display: flex; gap: 3px; margin-top: 4px; height: 6px; }
+.day .dot { width: 5px; height: 5px; border-radius: 50%; box-shadow: 0 0 6px rgba(0,0,0,0.5); }
+.day:active:not(.empty) { transform: scale(0.92); }
+
+.day-detail {
+  margin: 16px 18px 0;
+  background: var(--card);
+  border-radius: 22px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  display: none;
+}
+
+.day-detail.show { display: block; animation: pageFadeIn .2s; }
+
+.day-detail-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.day-detail-head h3 {
+  font-size: 16px;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.day-detail-head .add-btn {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  height: 38px;
+  padding: 0 14px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  touch-action: manipulation;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: transform 0.15s;
+  box-shadow: 0 4px 12px var(--accent-glow);
+}
+
+.day-detail-head .add-btn:active { transform: scale(0.92); }
+
+.entry {
+  background: var(--card2);
+  border-radius: 16px;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-left: 4px solid var(--green);
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform 0.15s;
+}
+
+.entry:active { transform: scale(0.98); }
+.entry.minus { border-left-color: var(--red); }
+.entry .entry-left { display: flex; align-items: center; gap: 12px; }
+.entry .entry-icon { width: 36px; height: 36px; border-radius: 11px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.entry .info .name { font-size: 15px; font-weight: 800; color: #ffffff; }
+.entry .info .type { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+.entry .sum { font-size: 16px; font-weight: 800; color: var(--green); white-space: nowrap; }
+.entry.minus .sum { color: var(--red); }
+
+/* ========================================================
+   BALANCE TAB
+   ======================================================== */
+.info-banner {
+  margin: 0 18px 14px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: rgba(99, 102, 241, 0.1);
+  border: 1px solid rgba(99, 102, 241, 0.28);
+  font-size: 13px;
+  color: var(--accent-light);
+  line-height: 1.5;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.info-banner .banner-icon {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--accent);
+}
+
+.stats-grid {
+  margin: 0 18px 14px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.stat-card {
+  background: var(--card);
+  border-radius: 20px;
+  padding: 16px;
+  border: 1px solid var(--border);
+}
+
+.stat-card .sc-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.stat-card .sc-lbl {
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.stat-card .sc-val {
+  font-size: 22px;
+  font-weight: 800;
+  margin-top: 8px;
+  letter-spacing: -0.5px;
+}
+
+.stat-card .sc-val.green { color: var(--green); text-shadow: 0 0 10px var(--green-glow); }
+.stat-card .sc-val.red { color: var(--red); text-shadow: 0 0 10px var(--red-glow); }
+.stat-card .sc-val.accent { color: var(--accent-light); }
+.stat-card .sc-sub { font-size: 12px; color: var(--text-secondary); margin-top: 4px; font-weight: 600; }
+
+/* Withdraw button */
+.withdraw-btn {
+  width: calc(100% - 36px);
+  margin: 0 18px 16px;
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.18), rgba(16, 185, 129, 0.08));
+  color: var(--green);
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+  touch-action: manipulation;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.15s;
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.15);
+}
+.withdraw-btn:hover {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.28), rgba(16, 185, 129, 0.14));
+  border-color: rgba(16, 185, 129, 0.5);
+}
+.withdraw-btn:active { transform: scale(0.98); }
+
+/* Withdraw modal: job choices */
+.withdraw-job-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+  max-height: 280px;
+  overflow-y: auto;
+}
+.wj-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: var(--card2);
+  border: 2px solid var(--border);
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: all 0.15s;
+}
+.wj-item.active {
+  border-color: var(--accent);
+  background: rgba(99, 102, 241, 0.12);
+}
+.wj-item:active { transform: scale(0.98); }
+.wj-icon {
+  width: 42px; height: 42px; border-radius: 13px;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.wj-info { flex: 1; min-width: 0; }
+.wj-name { font-size: 15px; font-weight: 800; color: #fff; }
+.wj-bal { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+.wj-check {
+  width: 22px; height: 22px; border-radius: 50%;
+  border: 2px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  color: transparent;
+  transition: all 0.15s;
+}
+.wj-item.active .wj-check {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+/* Archive */
+.archive-list {
+  margin: 0 18px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.archive-card {
+  background: var(--card);
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+.archive-head {
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: background 0.15s;
+}
+.archive-head:active { background: var(--card2); }
+.archive-icon {
+  width: 44px; height: 44px; border-radius: 14px;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.archive-info { flex: 1; min-width: 0; }
+.archive-title { font-size: 15px; font-weight: 800; color: #fff; }
+.archive-meta { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+.archive-amount { font-size: 17px; font-weight: 800; color: var(--green); white-space: nowrap; }
+.archive-arrow { color: var(--muted); transition: transform 0.2s; }
+.archive-card.open .archive-arrow { transform: rotate(180deg); }
+.archive-body {
+  display: none;
+  padding: 0 16px 16px;
+  border-top: 1px solid var(--border);
+}
+.archive-card.open .archive-body { display: block; animation: pageFadeIn 0.2s; }
+.archive-rows { padding-top: 12px; }
+.archive-row {
+  display: flex; justify-content: space-between;
+  padding: 7px 0; font-size: 13px;
+}
+.archive-row .k { color: var(--text-secondary); }
+.archive-row .v { font-weight: 800; }
+.archive-row .v.pos { color: var(--green); }
+.archive-row .v.neg { color: var(--red); }
+.archive-row.total {
+  border-top: 1px solid var(--border);
+  margin-top: 6px;
+  padding-top: 12px;
+  font-size: 14px;
+}
+.archive-breakdown {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border);
+}
+.archive-breakdown-title {
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+.archive-entry-mini {
+  display: flex; justify-content: space-between;
+  padding: 6px 0; font-size: 12px;
+}
+.archive-entry-mini .em-date { color: var(--text-secondary); }
+.archive-entry-mini .em-amt { font-weight: 700; }
+.archive-entry-mini .em-amt.pos { color: var(--green); }
+.archive-entry-mini .em-amt.neg { color: var(--red); }
+
+/* Detailed job balance cards */
+.job-bal-card {
+  margin: 0 18px 12px;
+  background: var(--card);
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+  transition: border-color 0.15s;
+}
+
+.job-bal-card:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.jbc-head {
+  padding: 16px 18px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: background 0.15s;
+}
+
+.jbc-head:active { background: var(--card2); }
+
+.jbc-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.jbc-info { flex: 1; min-width: 0; }
+.jbc-name { font-size: 16px; font-weight: 800; color: #ffffff; }
+.jbc-meta { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+.jbc-right { text-align: right; }
+.jbc-balance { font-size: 18px; font-weight: 800; white-space: nowrap; }
+.jbc-balance.pos { color: var(--green); }
+.jbc-balance.neg { color: var(--red); }
+.jbc-arrow { color: var(--muted); transition: transform 0.2s; margin-left: 6px; display: inline-block; vertical-align: middle; }
+.jbc-head.open .jbc-arrow { transform: rotate(180deg); }
+
+.jbc-body {
+  padding: 0 18px 16px;
+  border-top: 1px solid var(--border);
+  display: none;
+}
+
+.jbc-body.open { display: block; animation: pageFadeIn .2s; }
+
+.jbc-rows { padding-top: 12px; }
+.jbc-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 7px 0;
+  font-size: 14px;
+}
+
+.jbc-row .k { color: var(--text-secondary); }
+.jbc-row .v { font-weight: 800; }
+.jbc-row .v.pos { color: var(--green); }
+.jbc-row .v.neg { color: var(--red); }
+.jbc-row.total {
+  border-top: 1px solid var(--border);
+  margin-top: 6px;
+  padding-top: 12px;
+  font-size: 15px;
+}
+
+.jbc-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.jbc-action {
+  flex: 1;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--card2);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  touch-action: manipulation;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  transition: all 0.15s;
+}
+
+.jbc-action:active {
+  background: var(--card3);
+  transform: scale(0.97);
+}
+
+.jbc-action.plus { color: var(--green); background: rgba(16, 185, 129, 0.12); border-color: rgba(16, 185, 129, 0.25); }
+.jbc-action.minus { color: var(--red); background: rgba(244, 63, 94, 0.12); border-color: rgba(244, 63, 94, 0.25); }
+
+.jbc-schedule-btn {
+  margin-top: 10px;
+  width: 100%;
+  padding: 11px;
+  border-radius: 13px;
+  border: 1px dashed var(--border);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  touch-action: manipulation;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  transition: all 0.15s;
+}
+
+.jbc-schedule-btn:hover { color: #fff; border-color: rgba(255,255,255,0.25); }
+.jbc-schedule-btn:active { transform: scale(0.98); }
+
+.btn-add-job {
+  width: calc(100% - 36px);
+  margin: 6px 18px 16px;
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px dashed var(--border);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  touch-action: manipulation;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.15s;
+}
+
+.btn-add-job:hover {
+  background: var(--card);
+  color: #fff;
+  border-color: rgba(255,255,255,0.25);
+}
+
+.btn-add-job:active {
+  transform: scale(0.98);
+}
+
+.tx-list { margin: 0 18px; }
+
+.tx-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.tx-item:last-child { border-bottom: none; }
+
+.tx-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 13px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tx-icon.plus { background: rgba(16, 185, 129, 0.16); color: var(--green); }
+.tx-icon.minus { background: rgba(244, 63, 94, 0.16); color: var(--red); }
+
+.tx-info { flex: 1; min-width: 0; }
+.tx-info .tn { font-size: 15px; font-weight: 800; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tx-info .td { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+.tx-amt { font-size: 16px; font-weight: 800; }
+.tx-amt.plus { color: var(--green); }
+.tx-amt.minus { color: var(--red); }
+
+/* ========================================================
+   BOTTOM TABBAR
+   ======================================================== */
+.tabbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+  background: rgba(11, 13, 22, 0.92);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-top: 1px solid var(--border);
+  padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+  display: flex;
+  gap: 8px;
+}
+
+.tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 4px;
+  background: transparent;
+  border: none;
+  border-radius: 16px;
+  color: var(--muted);
+  cursor: pointer;
+  touch-action: manipulation;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  transition: all 0.15s;
+}
+
+.tab .tab-icon {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tab.active {
+  color: #ffffff;
+  background: rgba(99, 102, 241, 0.18);
+}
+
+.tab:active {
+  transform: scale(0.94);
+}
+
+/* FAB */
+.fab {
+  position: fixed;
+  bottom: calc(84px + env(safe-area-inset-bottom));
+  right: 18px;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  border: none;
+  background: linear-gradient(135deg, #6366f1, #a855f7);
+  color: #fff;
+  cursor: pointer;
+  touch-action: manipulation;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 12px 30px rgba(99, 102, 241, 0.55);
+  z-index: 30;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.fab:active {
+  transform: scale(0.9);
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);
+}
+
+/* ========================================================
+   MODALS
+   ======================================================== */
+.modal-bg {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.78);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  z-index: 60;
+  display: none;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.modal-bg.show {
+  display: flex;
+  animation: modalBgFade .2s ease;
+}
+
+@keyframes modalBgFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal {
+  background: var(--card);
+  width: 100%;
+  max-width: 520px;
+  border-radius: 28px 28px 0 0;
+  padding: 22px 20px calc(26px + env(safe-area-inset-bottom));
+  animation: modalSlideUp .3s cubic-bezier(.16, 1, .3, 1);
+  max-height: 90vh;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-bottom: none;
+}
+
+@keyframes modalSlideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.modal-header h2 {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.4px;
+}
+
+.modal-close-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--card2);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: all 0.15s;
+}
+
+.modal-close-btn:active {
+  transform: scale(0.9);
+}
+
+.field { margin-bottom: 16px; }
+
+.field label {
+  display: block;
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.field input, .field select, .field textarea {
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--card2);
+  color: #ffffff;
+  font-size: 16px;
+  outline: none;
+  font-family: inherit;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.field input:focus, .field select:focus, .field textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+.field textarea {
+  resize: vertical;
+  min-height: 68px;
+}
+
+/* Quick chips row for fast 1-tap input */
+.quick-chips-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: none;
+}
+.quick-chips-row::-webkit-scrollbar { display: none; }
+
+.quick-chip {
+  padding: 8px 14px;
+  border-radius: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: all 0.15s;
+}
+
+.quick-chip:hover {
+  background: var(--surface-hover);
+  color: #ffffff;
+}
+
+.quick-chip:active {
+  transform: scale(0.94);
+  background: var(--accent);
+  color: #fff;
+}
+
+/* Stepper Amount Input Wrap */
+.amount-input-wrap {
+  display: flex;
+  gap: 8px;
+}
+
+.amount-input-wrap input {
+  flex: 1;
+}
+
+.amount-step-btn {
+  width: 58px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--card2);
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.amount-step-btn:hover {
+  color: #fff;
+  border-color: rgba(255,255,255,0.25);
+}
+
+.amount-step-btn:active {
+  transform: scale(0.92);
+  background: var(--card3);
+}
+
+.type-toggle {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.type-toggle button {
+  flex: 1;
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--card2);
+  color: var(--text-secondary);
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+  touch-action: manipulation;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.15s;
+}
+
+.type-toggle button.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.type-toggle button.active.minus {
+  background: var(--red);
+  border-color: var(--red);
+}
+
+.btn-save {
+  width: 100%;
+  padding: 16px;
+  border-radius: 16px;
+  border: none;
+  background: linear-gradient(135deg, #6366f1, #a855f7);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 800;
+  cursor: pointer;
+  touch-action: manipulation;
+  margin-top: 10px;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 8px 24px var(--accent-glow);
+  transition: transform 0.1s, opacity 0.15s;
+}
+
+.btn-save:active {
+  transform: scale(0.98);
+  opacity: 0.92;
+}
+
+.btn-del {
+  width: 100%;
+  padding: 14px;
+  border-radius: 16px;
+  border: none;
+  background: rgba(244, 63, 94, 0.14);
+  color: var(--red);
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  touch-action: manipulation;
+  margin-top: 8px;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  transition: background 0.15s;
+}
+
+.btn-del:active {
+  background: rgba(244, 63, 94, 0.25);
+}
+
+.btn-cancel {
+  width: 100%;
+  padding: 14px;
+  border-radius: 16px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  touch-action: manipulation;
+  margin-top: 4px;
+  font-family: inherit;
+}
+
+/* Color & Icon Pickers */
+.color-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 10px;
+}
+
+.color-swatch {
+  aspect-ratio: 1;
+  border-radius: 14px;
+  cursor: pointer;
+  touch-action: manipulation;
+  border: 3px solid transparent;
+  transition: all 0.15s;
+}
+
+.color-swatch.active {
+  border-color: #fff;
+  transform: scale(1.1);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.5);
+}
+
+.icon-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 10px;
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 4px;
+}
+
+.icon-btn-choice {
+  aspect-ratio: 1;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--card2);
+  color: var(--text-secondary);
+  cursor: pointer;
+  touch-action: manipulation;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.icon-btn-choice:hover {
+  color: #fff;
+  background: var(--surface-hover);
+}
+
+.icon-btn-choice.active {
+  border-color: var(--accent);
+  background: rgba(99, 102, 241, 0.25);
+  color: var(--accent-light);
+  transform: scale(1.06);
+}
+</style>
+</head>
+<body>
+
+<!-- ========================================================
+     OFFLINE BANNER
+     ======================================================== -->
+<div class="offline-banner" id="offlineBanner">
+  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="1" y1="1" x2="23" y2="23"></line>
+    <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"></path>
+    <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"></path>
+    <path d="M10.71 5.05A16 16 0 0 1 22.58 9"></path>
+    <path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"></path>
+    <path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
+    <line x1="12" y1="20" x2="12.01" y2="20"></line>
+  </svg>
+  <span>Включите VPN или проверьте соединение с интернетом</span>
+</div>
+
+<!-- ========================================================
+     LOCK SCREEN (PASSCODE 11042006)
+     ======================================================== -->
+<div class="lockscreen" id="lockScreen">
+  <div class="lock-top">
+    <div class="lock-badge" id="lockBadge">
+      <svg id="lockIconSvg" viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+      </svg>
+    </div>
+    <div class="lock-title">Календарь зарплат</div>
+    <div class="lock-subtitle">Введите 8-значный код доступа</div>
+    <div class="pin-error-text" id="pinError"></div>
+
+    <div class="pin-dots-container" id="pinDots">
+      <div class="pin-dot"></div>
+      <div class="pin-dot"></div>
+      <div class="pin-dot"></div>
+      <div class="pin-dot"></div>
+      <div class="pin-dot"></div>
+      <div class="pin-dot"></div>
+      <div class="pin-dot"></div>
+      <div class="pin-dot"></div>
+    </div>
+
+    <div class="pin-loading" id="pinLoading">
+      <div class="pin-spinner"></div>
+      <div class="pin-loading-text">Проверка кода...</div>
+    </div>
+
+    <div class="faceid-wrap" id="faceidWrap">
+      <button class="faceid-btn" id="faceidBtn" onclick="tryBiometric()" title="Войти по Face ID / Touch ID">
+        <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 3H5a2 2 0 0 0-2 2v4"></path>
+          <path d="M15 3h4a2 2 0 0 1 2 2v4"></path>
+          <path d="M9 21H5a2 2 0 0 1-2-2v-4"></path>
+          <path d="M15 21h4a2 2 0 0 0 2-2v-4"></path>
+          <path d="M9 9v1a3 3 0 0 0 3 3"></path>
+          <path d="M12 7v4"></path>
+          <path d="M15 9v1a3 3 0 0 1-1.5 2.6"></path>
+          <path d="M9 15a3 3 0 0 0 3 3"></path>
+          <path d="M12 18v.01"></path>
+        </svg>
+      </button>
+      <div class="faceid-label">Face ID / Touch ID</div>
+    </div>
+  </div>
+
+  <div class="keypad-grid">
+    <button class="keypad-btn" onclick="enterPinDigit('1')">
+      <span class="keypad-num">1</span>
+      <span class="keypad-letters">&nbsp;</span>
+    </button>
+    <button class="keypad-btn" onclick="enterPinDigit('2')">
+      <span class="keypad-num">2</span>
+      <span class="keypad-letters">ABC</span>
+    </button>
+    <button class="keypad-btn" onclick="enterPinDigit('3')">
+      <span class="keypad-num">3</span>
+      <span class="keypad-letters">DEF</span>
+    </button>
+    <button class="keypad-btn" onclick="enterPinDigit('4')">
+      <span class="keypad-num">4</span>
+      <span class="keypad-letters">GHI</span>
+    </button>
+    <button class="keypad-btn" onclick="enterPinDigit('5')">
+      <span class="keypad-num">5</span>
+      <span class="keypad-letters">JKL</span>
+    </button>
+    <button class="keypad-btn" onclick="enterPinDigit('6')">
+      <span class="keypad-num">6</span>
+      <span class="keypad-letters">MNO</span>
+    </button>
+    <button class="keypad-btn" onclick="enterPinDigit('7')">
+      <span class="keypad-num">7</span>
+      <span class="keypad-letters">PQRS</span>
+    </button>
+    <button class="keypad-btn" onclick="enterPinDigit('8')">
+      <span class="keypad-num">8</span>
+      <span class="keypad-letters">TUV</span>
+    </button>
+    <button class="keypad-btn" onclick="enterPinDigit('9')">
+      <span class="keypad-num">9</span>
+      <span class="keypad-letters">WXYZ</span>
+    </button>
+    <button class="keypad-action-btn" onclick="clearPin()">
+      Сброс
+    </button>
+    <button class="keypad-btn" onclick="enterPinDigit('0')">
+      <span class="keypad-num">0</span>
+      <span class="keypad-letters">+</span>
+    </button>
+    <button class="keypad-action-btn" onclick="deletePinDigit()" title="Удалить">
+      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"></path>
+        <line x1="18" y1="9" x2="12" y2="15"></line>
+        <line x1="12" y1="9" x2="18" y2="15"></line>
+      </svg>
+    </button>
+  </div>
+</div>
+
+<!-- ========================================================
+     MAIN APPLICATION ROOT
+     ======================================================== -->
+<div id="app-root">
+
+  <!-- TOP HEADER -->
+  <div class="top-header">
+    <div class="brand-wrap">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+        </svg>
+      </div>
+      <div>
+        <h1 id="pageMainTitle">Сегодня</h1>
+        <div class="date-sub" id="todaySub"></div>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button class="icon-btn-header" title="Заблокировать экран" onclick="lockApp()">
+        <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+        </svg>
+      </button>
+      <button class="icon-btn-header" title="Добавить запись" onclick="openEntryModal()">
+        <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19"></line>
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- TODAY TAB -->
+  <div class="page active" id="page-today">
+    <div class="hero-card">
+      <div class="label-row">
+        <div class="label">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"></path>
+            <path d="M3 5v14a2 2 0 0 0 2 2h16v-5"></path>
+            <path d="M18 12a2 2 0 0 0 0 4h4v-4Z"></path>
+          </svg>
+          Общий баланс
+        </div>
+        <span style="font-size:11px;color:rgba(255,255,255,0.75);font-weight:700;">до сегодня</span>
+      </div>
+      <div class="amount" id="heroBalance">0 ₽</div>
+      <div class="bottom-row">
+        <div class="stat-chip">
+          <span class="lbl">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+              <polyline points="17 6 23 6 23 12"></polyline>
+            </svg>
+            Отработано
+          </span>
+          <div class="val" id="heroEarned">0 ₽</div>
+        </div>
+        <div class="stat-chip">
+          <span class="lbl">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="23 18 13.5 8.5 8.5 13.5 1 6"></polyline>
+              <polyline points="17 18 23 18 23 12"></polyline>
+            </svg>
+            Авансы
+          </span>
+          <div class="val" id="heroAdvance">0 ₽</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-title">
+      <span>Баланс по работам</span>
+      <span style="font-size:11px;color:var(--muted);font-weight:600;text-transform:none;letter-spacing:0;">до сегодня</span>
+    </div>
+    <div class="job-balances" id="miniJobs"></div>
+
+    <div class="section-title">
+      <span>Ближайшая смена</span>
+    </div>
+    <div id="nextShiftBox"></div>
+
+    <div class="section-title">
+      <span>Предстоящие смены</span>
+    </div>
+    <div class="list" id="upcomingList"></div>
+  </div>
+
+  <!-- CALENDAR TAB -->
+  <div class="page" id="page-calendar">
+    <!-- Workplace filter bar -->
+    <div class="job-filter-bar" id="calendarJobFilter"></div>
+
+    <div class="month-nav">
+      <button onclick="changeMonth(-1)" title="Предыдущий месяц">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+      </button>
+      <div class="title" id="monthTitle"></div>
+      <button onclick="changeMonth(1)" title="Следующий месяц">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="9 18 15 12 9 6"></polyline>
+        </svg>
+      </button>
+    </div>
+
+    <div class="month-summary">
+      <div class="ms-col">
+        <div class="ms-lbl">Смен</div>
+        <div class="ms-val" id="msCount">0</div>
+      </div>
+      <div class="ms-col">
+        <div class="ms-lbl">Заработок</div>
+        <div class="ms-val green" id="msEarned">0 ₽</div>
+      </div>
+      <div class="ms-col">
+        <div class="ms-lbl">Авансы</div>
+        <div class="ms-val red" id="msAdv">0 ₽</div>
+      </div>
+    </div>
+
+    <div class="calendar">
+      <div class="weekdays">
+        <div>Пн</div><div>Вт</div><div>Ср</div><div>Чт</div><div>Пт</div><div>Сб</div><div>Вс</div>
+      </div>
+      <div class="days" id="days"></div>
+    </div>
+
+    <div class="day-detail" id="dayDetail">
+      <div class="day-detail-head">
+        <h3 id="detailDate"></h3>
+        <button class="add-btn" onclick="openEntryModal(selectedDate)" title="Добавить на этот день">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          Добавить
+        </button>
+      </div>
+      <div id="detailEntries"></div>
+    </div>
+  </div>
+
+  <!-- BALANCE TAB -->
+  <div class="page" id="page-balance">
+    <div class="info-banner">
+      <span class="banner-icon">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="16" x2="12" y2="12"></line>
+          <line x1="12" y1="8" x2="12.01" y2="8"></line>
+        </svg>
+      </span>
+      <span>Аванс списывается строго с выбранной работы. Балансы между разными местами работы ведутся независимо.</span>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="sc-top">
+          <div class="sc-lbl">Отработано до сегодня</div>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="var(--green)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+            <polyline points="17 6 23 6 23 12"></polyline>
+          </svg>
+        </div>
+        <div class="sc-val green" id="statEarned">0 ₽</div>
+        <div class="sc-sub" id="statCount">0 смен</div>
+      </div>
+      <div class="stat-card">
+        <div class="sc-top">
+          <div class="sc-lbl">Авансы до сегодня</div>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="var(--red)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="23 18 13.5 8.5 8.5 13.5 1 6"></polyline>
+            <polyline points="17 18 23 18 23 12"></polyline>
+          </svg>
+        </div>
+        <div class="sc-val red" id="statAdv">0 ₽</div>
+        <div class="sc-sub" id="statAdvCount">0 операций</div>
+      </div>
+      <div class="stat-card">
+        <div class="sc-top">
+          <div class="sc-lbl">Остаток к выплате</div>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="var(--accent-light)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"></path>
+            <path d="M3 5v14a2 2 0 0 0 2 2h16v-5"></path>
+            <path d="M18 12a2 2 0 0 0 0 4h4v-4Z"></path>
+          </svg>
+        </div>
+        <div class="sc-val accent" id="statNet">0 ₽</div>
+        <div class="sc-sub">чистый баланс на сегодня</div>
+      </div>
+      <div class="stat-card">
+        <div class="sc-top">
+          <div class="sc-lbl">Средний доход</div>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="var(--amber)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+          </svg>
+        </div>
+        <div class="sc-val" id="statAvg">0 ₽</div>
+        <div class="sc-sub">за смену</div>
+      </div>
+    </div>
+
+    <!-- Кнопка "Вывод" -->
+    <button class="withdraw-btn" onclick="openWithdrawModal()">
+      <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="12" y1="19" x2="12" y2="5"></line>
+        <polyline points="5 12 12 5 19 12"></polyline>
+      </svg>
+      Вывод средств
+    </button>
+
+    <!-- Архив / Отчёт -->
+    <div id="archiveSection"></div>
+
+    <div class="section-title">
+      <span>Баланс по местам работы</span>
+      <span style="font-size:11px;color:var(--muted);font-weight:600;text-transform:none;letter-spacing:0;">до сегодня</span>
+    </div>
+    <div id="jobBalancesFull"></div>
+
+    <button class="btn-add-job" onclick="openJobModal()">
+      <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="12" y1="5" x2="12" y2="19"></line>
+        <line x1="5" y1="12" x2="19" y2="12"></line>
+      </svg>
+      Добавить место работы
+    </button>
+
+    <div class="section-title">
+      <span>История операций</span>
+    </div>
+    <div class="tx-list" id="txList"></div>
+  </div>
+
+  <!-- FLOATING ACTION BUTTON -->
+  <button class="fab" id="fabBtn" onclick="openEntryModal()" title="Добавить смену или аванс">
+    <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="12" y1="5" x2="12" y2="19"></line>
+      <line x1="5" y1="12" x2="19" y2="12"></line>
+    </svg>
+  </button>
+
+  <!-- BOTTOM TABBAR -->
+  <div class="tabbar">
+    <button class="tab active" data-tab="today" onclick="switchTab('today')">
+      <div class="tab-icon">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+        </svg>
+      </div>
+      <span>Сегодня</span>
+    </button>
+    <button class="tab" data-tab="calendar" onclick="switchTab('calendar')">
+      <div class="tab-icon">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+          <line x1="16" y1="2" x2="16" y2="6"></line>
+          <line x1="8" y1="2" x2="8" y2="6"></line>
+          <line x1="3" y1="10" x2="21" y2="10"></line>
+        </svg>
+      </div>
+      <span>Календарь</span>
+    </button>
+    <button class="tab" data-tab="balance" onclick="switchTab('balance')">
+      <div class="tab-icon">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"></path>
+          <path d="M3 5v14a2 2 0 0 0 2 2h16v-5"></path>
+          <path d="M18 12a2 2 0 0 0 0 4h4v-4Z"></path>
+        </svg>
+      </div>
+      <span>Баланс</span>
+    </button>
+  </div>
+
+</div> <!-- /app-root -->
+
+<!-- ========================================================
+     ENTRY MODAL (SHIFT / ADVANCE)
+     ======================================================== -->
+<div class="modal-bg" id="entryModalBg" onclick="if(event.target===this)closeEntryModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="entryModalTitle">Новая запись</h2>
+      <button class="modal-close-btn" onclick="closeEntryModal()">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+
+    <div class="type-toggle">
+      <button id="btnPlus" class="active" onclick="setEntryType('plus')">
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19"></line>
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+        Смена
+      </button>
+      <button id="btnMinus" onclick="setEntryType('minus')">
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+        Аванс
+      </button>
+    </div>
+
+    <div class="field">
+      <label>Дата</label>
+      <input type="date" id="inpDate">
+      <div class="quick-chips-row">
+        <button type="button" class="quick-chip" onclick="setQuickDate(-1)">Вчера</button>
+        <button type="button" class="quick-chip" onclick="setQuickDate(0)">Сегодня</button>
+        <button type="button" class="quick-chip" onclick="setQuickDate(1)">Завтра</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Место работы</label>
+      <select id="inpJob" onchange="onJobChange()"></select>
+    </div>
+
+    <div class="field" id="customNameField" style="display:none">
+      <label>Своё описание</label>
+      <input type="text" id="inpCustomName" placeholder="Например: подработка, шабашка...">
+    </div>
+
+    <div class="field">
+      <label>Сумма (₽)</label>
+      <div class="amount-input-wrap">
+        <button type="button" class="amount-step-btn" onclick="adjustAmount(-500)">−500</button>
+        <input type="number" id="inpAmount" placeholder="3000" inputmode="numeric">
+        <button type="button" class="amount-step-btn" onclick="adjustAmount(500)">+500</button>
+      </div>
+      <div class="quick-chips-row">
+        <button type="button" class="quick-chip" onclick="setQuickAmount(2000)">2 000 ₽</button>
+        <button type="button" class="quick-chip" onclick="setQuickAmount(2500)">2 500 ₽</button>
+        <button type="button" class="quick-chip" onclick="setQuickAmount(3000)">3 000 ₽</button>
+        <button type="button" class="quick-chip" onclick="setQuickAmount(3500)">3 500 ₽</button>
+        <button type="button" class="quick-chip" onclick="setQuickAmount(4000)">4 000 ₽</button>
+        <button type="button" class="quick-chip" onclick="setQuickAmount(5000)">5 000 ₽</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Заметка (необязательно)</label>
+      <textarea id="inpNote" placeholder="Детали смены или комментарий к авансу..."></textarea>
+    </div>
+
+    <button class="btn-save" onclick="saveEntry()">
+      <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="20 6 9 17 4 12"></polyline>
+      </svg>
+      Сохранить
+    </button>
+    <button class="btn-del" id="btnDeleteEntry" style="display:none" onclick="deleteEntry()">
+      <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="3 6 5 6 21 6"></polyline>
+        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+      </svg>
+      Удалить запись
+    </button>
+    <button class="btn-cancel" onclick="closeEntryModal()">Отмена</button>
+  </div>
+</div>
+
+<!-- ========================================================
+     JOB MODAL (MANAGE WORKPLACES)
+     ======================================================== -->
+<div class="modal-bg" id="jobModalBg" onclick="if(event.target===this)closeJobModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="jobModalTitle">Новое место работы</h2>
+      <button class="modal-close-btn" onclick="closeJobModal()">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+
+    <div class="field">
+      <label>Название</label>
+      <input type="text" id="jobName" placeholder="Озон, Яндекс, ВБ, Офис...">
+    </div>
+
+    <div class="field">
+      <label>Цвет</label>
+      <div class="color-grid" id="colorGrid"></div>
+    </div>
+
+    <div class="field">
+      <label>Иконка</label>
+      <div class="icon-grid" id="iconGrid"></div>
+    </div>
+
+    <button class="btn-save" onclick="saveJob()">
+      <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="20 6 9 17 4 12"></polyline>
+      </svg>
+      Сохранить
+    </button>
+    <button class="btn-del" id="btnDeleteJob" style="display:none" onclick="deleteJob()">
+      <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="3 6 5 6 21 6"></polyline>
+        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+      </svg>
+      Удалить место работы
+    </button>
+    <button class="btn-cancel" onclick="closeJobModal()">Отмена</button>
+  </div>
+</div>
+
+<!-- ========================================================
+     WITHDRAW MODAL
+     ======================================================== -->
+<div class="modal-bg" id="withdrawModalBg" onclick="if(event.target===this)closeWithdrawModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Вывод средств</h2>
+      <button class="modal-close-btn" onclick="closeWithdrawModal()">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+
+    <div class="info-banner" style="margin: 0 0 16px;">
+      <span class="banner-icon">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="16" x2="12" y2="12"></line>
+          <line x1="12" y1="8" x2="12.01" y2="8"></line>
+        </svg>
+      </span>
+      <span>После вывода баланс по выбранной работе обнулится. Смены останутся в календаре, а отчёт сохранится в архиве.</span>
+    </div>
+
+    <div class="field">
+      <label>Выберите работу</label>
+      <div class="withdraw-job-list" id="withdrawJobList"></div>
+    </div>
+
+    <div class="field">
+      <label>Сумма вывода (₽)</label>
+      <input type="number" id="withdrawAmount" placeholder="0" inputmode="numeric">
+      <div class="quick-chips-row">
+        <button type="button" class="quick-chip" onclick="setWithdrawFull()">Весь баланс</button>
+        <button type="button" class="quick-chip" onclick="setWithdrawAmount(1000)">1 000 ₽</button>
+        <button type="button" class="quick-chip" onclick="setWithdrawAmount(3000)">3 000 ₽</button>
+        <button type="button" class="quick-chip" onclick="setWithdrawAmount(5000)">5 000 ₽</button>
+      </div>
+    </div>
+
+    <button class="btn-save" onclick="saveWithdraw()">
+      <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="20 6 9 17 4 12"></polyline>
+      </svg>
+      Подтвердить вывод
+    </button>
+    <button class="btn-cancel" onclick="closeWithdrawModal()">Отмена</button>
+  </div>
+</div>
+
+<script>
+// ========================================================
+// HAPTIC FEEDBACK HELPER
+// ========================================================
+function triggerHaptic(ms = 12) {
+  if (navigator && navigator.vibrate) {
+    try { navigator.vibrate(ms); } catch (e) {}
+  }
+}
+
+// ========================================================
+// OFFLINE DETECTION
+// ========================================================
+function updateOnlineStatus() {
+  const banner = document.getElementById('offlineBanner');
+  if (!banner) return;
+  if (navigator.onLine) {
+    banner.classList.remove('show');
+  } else {
+    banner.classList.add('show');
+  }
+}
+window.addEventListener('online', updateOnlineStatus);
+window.addEventListener('offline', updateOnlineStatus);
+document.addEventListener('DOMContentLoaded', updateOnlineStatus);
+
+// ========================================================
+// SVG ICON REGISTRY (NO EMOJIS)
+// ========================================================
+const ICONS = {
+  'package': `<svg viewBox="0 0 24 24" width="{s}" height="{s}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"></line><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>`,
+  'shopping-bag': `<svg viewBox="0 0 24 24" width="{s}" height="{s}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>`,
+  'car': `<svg viewBox="0 0 24 24" width="{s}" height="{s}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"></path><circle cx="7" cy="17" r="2"></circle><path d="M9 17h6"></path><circle cx="17" cy="17" r="2"></circle></svg>`,
+  'laptop': `<svg viewBox="0 0 24 24" width="{s}" height="{s}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 16V7a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v9m16 0H4m16 0 1.28 2.55a1 1 0 0 1-.9 1.45H3.62a1 1 0 0 1-.9-1.45L4 16"></path></svg>`,
+  'store': `<svg viewBox="0 0 24 24" width="{s}" height="{s}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"></path><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4"></path><path d="M2 7h20"></path></svg>`,
+  'utensils': `<svg viewBox="0 0 24 24" width="{s}" height="{s}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2v6a3 3 0 0 1-3 3 3 3 0 0 1-3-3V2"></path><path d="M15 2v18"></path><path d="M6 2v7a3 3 0 0 0 3 3h0a3 3 0 0 0 3-3V2"></path><path d="M9 12v8"></path></svg>`,
+  'wrench': `<svg viewBox="0 0 24 24" width="{s}" height="{s}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>`,
+  'briefcase': `<svg viewBox="0 0 24 24" width="{s}" height="{s}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="7" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>`,
+  'palette': `<svg viewBox="0 0 24 24" width="{s}" height="{s}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"></circle><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"></circle><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"></circle><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"></circle><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.563-2.512 5.563-5.563C21.437 6.469 17.188 2 12 2z"></path></svg>`,
+  'book': `<svg viewBox="0 0 24 24" width="{s}" height="{s}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"></path><path d="M6 2v18"></path></svg>`,
+  'heart-pulse': `<svg viewBox="0 0 24 24" width="{s}" height="{s}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"></path><path d="M3.22 12H9.5l.5-1 2 4.5 2-7 1.5 3.5h5.27"></path></svg>`,
+  'bike': `<svg viewBox="0 0 24 24" width="{s}" height="{s}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18.5" cy="17.5" r="3.5"></circle><circle cx="5.5" cy="17.5" r="3.5"></circle><circle cx="15" cy="5" r="1"></circle><path d="M12 17.5V14l-3-3 4-3 2 3h2"></path></svg>`,
+  'coffee': `<svg viewBox="0 0 24 24" width="{s}" height="{s}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 8h1a4 4 0 1 1 0 8h-1"></path><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"></path><line x1="6" y1="2" x2="6" y2="4"></line><line x1="10" y1="2" x2="10" y2="4"></line><line x1="14" y1="2" x2="14" y2="4"></line></svg>`,
+  'camera': `<svg viewBox="0 0 24 24" width="{s}" height="{s}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"></path><circle cx="12" cy="13" r="3"></circle></svg>`,
+  'wallet': `<svg viewBox="0 0 24 24" width="{s}" height="{s}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"></path><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"></path><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"></path></svg>`,
+  'sparkles': `<svg viewBox="0 0 24 24" width="{s}" height="{s}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"></path></svg>`,
+  'edit': `<svg viewBox="0 0 24 24" width="{s}" height="{s}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>`,
+  'trash': `<svg viewBox="0 0 24 24" width="{s}" height="{s}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`,
+  'clock': `<svg viewBox="0 0 24 24" width="{s}" height="{s}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>`,
+  'chevron-down': `<svg viewBox="0 0 24 24" width="{s}" height="{s}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>`,
+  'archive': `<svg viewBox="0 0 24 24" width="{s}" height="{s}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="5" x="2" y="3" rx="1"></rect><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"></path><path d="M10 12h4"></path></svg>`,
+  'check': `<svg viewBox="0 0 24 24" width="{s}" height="{s}" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`
+};
+
+const AVAILABLE_ICONS = [
+  'package', 'shopping-bag', 'car', 'laptop', 'store', 'utensils',
+  'wrench', 'briefcase', 'palette', 'book', 'heart-pulse', 'bike',
+  'coffee', 'camera', 'wallet', 'sparkles'
+];
+
+const EMOJI_TO_ICON_MAP = {
+  '📦': 'package',
+  '🚗': 'car',
+  '💻': 'laptop',
+  '🍔': 'utensils',
+  '🏪': 'store',
+  '🏢': 'store',
+  '🛠️': 'wrench',
+  '🎨': 'palette',
+  '📚': 'book',
+  '🎵': 'sparkles',
+  '⚕️': 'heart-pulse',
+  '🛵': 'bike',
+  '🚕': 'car',
+  '🌮': 'utensils',
+  '📸': 'camera',
+  '💼': 'briefcase'
+};
+
+function getIconSvg(name, size = 20) {
+  const tpl = ICONS[name] || ICONS['briefcase'];
+  return tpl.replace(/\{s\}/g, size);
+}
+
+function getJobIcon(job) {
+  if (!job) return 'briefcase';
+  if (job.icon && ICONS[job.icon]) return job.icon;
+  if (job.emoji && EMOJI_TO_ICON_MAP[job.emoji]) return EMOJI_TO_ICON_MAP[job.emoji];
+  return 'briefcase';
+}
+
+// ========================================================
+// PASSCODE AUTHENTICATION (MOBILE PHONE STYLE)
+// Passcode: 11042006
+// ========================================================
+const REQUIRED_PIN = '11042006';
+let currentPin = '';
+let isCheckingPin = false;
+
+function updatePinDots() {
+  const dots = document.querySelectorAll('#pinDots .pin-dot');
+  dots.forEach((dot, index) => {
+    dot.className = 'pin-dot';
+    if (index < currentPin.length) {
+      dot.classList.add('filled');
+    }
+  });
+}
+
+function enterPinDigit(digit) {
+  if (isCheckingPin || currentPin.length >= 8) return;
+  triggerHaptic(12);
+  currentPin += digit;
+  updatePinDots();
+  document.getElementById('pinError').textContent = '';
+
+  if (currentPin.length === 8) {
+    checkPin();
+  }
+}
+
+function deletePinDigit() {
+  if (isCheckingPin || currentPin.length === 0) return;
+  triggerHaptic(10);
+  currentPin = currentPin.slice(0, -1);
+  updatePinDots();
+  document.getElementById('pinError').textContent = '';
+}
+
+function clearPin() {
+  if (isCheckingPin) return;
+  triggerHaptic(15);
+  currentPin = '';
+  updatePinDots();
+  document.getElementById('pinError').textContent = '';
+}
+
+function checkPin() {
+  isCheckingPin = true;
+  const container = document.getElementById('pinDots');
+  const errorEl = document.getElementById('pinError');
+  const badge = document.getElementById('lockBadge');
+  const lockSvg = document.getElementById('lockIconSvg');
+  const loading = document.getElementById('pinLoading');
+  const faceid = document.getElementById('faceidWrap');
+
+  loading.classList.add('show');
+  faceid.style.display = 'none';
+  container.style.display = 'none';
+
+  setTimeout(() => {
+    if (currentPin === REQUIRED_PIN) {
+      triggerHaptic([30, 40, 30]);
+      loading.querySelector('.pin-spinner').style.display = 'none';
+      loading.querySelector('.pin-loading-text').innerHTML = 
+        `<div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+          <div style="width:44px;height:44px;border-radius:50%;background:rgba(16,185,129,0.18);display:flex;align-items:center;justify-content:center;color:var(--green);">${getIconSvg('check', 24)}</div>
+          <div>Готово</div>
+        </div>`;
+      badge.classList.add('success');
+      lockSvg.innerHTML = `
+        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+        <path d="M7 11V7a5 5 0 0 1 9.9-1"></path>
+      `;
+
+      sessionStorage.setItem('sal_authenticated', '1');
+      localStorage.setItem('sal_pin_verified', '1');
+
+      setTimeout(() => {
+        loading.classList.remove('show');
+        unlockApp();
+        isCheckingPin = false;
+      }, 400);
+    } else {
+      triggerHaptic([70, 50, 70]);
+      loading.classList.remove('show');
+      container.style.display = 'flex';
+      faceid.style.display = 'flex';
+      container.classList.add('shake');
+      errorEl.textContent = 'Неверный код доступа. Попробуйте снова';
+
+      setTimeout(() => {
+        container.classList.remove('shake');
+        currentPin = '';
+        updatePinDots();
+        isCheckingPin = false;
+      }, 550);
+    }
+  }, 550);
+}
+
+function unlockApp() {
+  const lock = document.getElementById('lockScreen');
+  const appRoot = document.getElementById('app-root');
+  appRoot.style.display = 'block';
+  lock.classList.add('unlocked');
+  setTimeout(() => {
+    lock.style.display = 'none';
+  }, 400);
+  refreshAll();
+  updateOnlineStatus();
+}
+
+function lockApp() {
+  triggerHaptic(20);
+  sessionStorage.removeItem('sal_authenticated');
+  currentPin = '';
+  updatePinDots();
+  const lock = document.getElementById('lockScreen');
+  const badge = document.getElementById('lockBadge');
+  const lockSvg = document.getElementById('lockIconSvg');
+  const loading = document.getElementById('pinLoading');
+  const faceid = document.getElementById('faceidWrap');
+  const dots = document.getElementById('pinDots');
+  badge.classList.remove('success');
+  loading.classList.remove('show');
+  loading.querySelector('.pin-spinner').style.display = '';
+  loading.querySelector('.pin-loading-text').textContent = 'Проверка кода...';
+  dots.style.display = 'flex';
+  faceid.style.display = 'flex';
+  lockSvg.innerHTML = `
+    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+  `;
+  document.getElementById('pinError').textContent = '';
+  lock.style.display = 'flex';
+  setTimeout(() => {
+    lock.classList.remove('unlocked');
+    document.getElementById('app-root').style.display = 'none';
+  }, 10);
+}
+
+// ========================================================
+// FACE ID / TOUCH ID (WebAuthn)
+// ========================================================
+async function tryBiometric() {
+  const btn = document.getElementById('faceidBtn');
+  const errorEl = document.getElementById('pinError');
+  if (!btn) return;
+  btn.disabled = true;
+  errorEl.textContent = '';
+
+  try {
+    if (!window.PublicKeyCredential) {
+      throw new Error('WebAuthn не поддерживается');
+    }
+
+    let available = false;
+    try {
+      available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+    } catch (e) { available = false; }
+
+    if (!available) {
+      errorEl.textContent = 'Биометрия недоступна. Введите код.';
+      setTimeout(() => { errorEl.textContent = ''; }, 2500);
+      btn.disabled = false;
+      return;
+    }
+
+    if (localStorage.getItem('sal_pin_verified') !== '1') {
+      errorEl.textContent = 'Сначала войдите по коду один раз';
+      setTimeout(() => { errorEl.textContent = ''; }, 2500);
+      btn.disabled = false;
+      return;
+    }
+
+    const challenge = new Uint8Array(32);
+    crypto.getRandomValues(challenge);
+
+    let credentialId = localStorage.getItem('sal_cred_id');
+    let credIdBytes;
+    if (credentialId) {
+      try {
+        const raw = atob(credentialId);
+        credIdBytes = new Uint8Array(raw.length);
+        for (let i = 0; i < raw.length; i++) credIdBytes[i] = raw.charCodeAt(i);
+      } catch (e) { credIdBytes = null; }
+    }
+
+    if (credIdBytes) {
+      const assertion = await navigator.credentials.get({
+        publicKey: {
+          challenge,
+          allowCredentials: [{
+            id: credIdBytes,
+            type: 'public-key',
+            transports: ['internal']
+          }],
+          userVerification: 'required',
+          timeout: 60000
+        }
+      });
+      if (assertion) {
+        triggerHaptic([30, 40, 30]);
+        sessionStorage.setItem('sal_authenticated', '1');
+        unlockApp();
+      }
+    } else {
+      const userId = new Uint8Array(16);
+      crypto.getRandomValues(userId);
+      const credential = await navigator.credentials.create({
+        publicKey: {
+          challenge,
+          rp: { name: 'Календарь зарплат' },
+          user: {
+            id: userId,
+            name: 'user@salary.local',
+            displayName: 'Пользователь'
+          },
+          pubKeyCredParams: [
+            { type: 'public-key', alg: -7 },
+            { type: 'public-key', alg: -257 }
+          ],
+          authenticatorSelection: {
+            authenticatorAttachment: 'platform',
+            userVerification: 'required',
+            residentKey: 'preferred'
+          },
+          timeout: 60000,
+          attestation: 'none'
+        }
+      });
+      if (credential) {
+        const rawId = new Uint8Array(credential.rawId);
+        let binary = '';
+        for (let i = 0; i < rawId.length; i++) binary += String.fromCharCode(rawId[i]);
+        localStorage.setItem('sal_cred_id', btoa(binary));
+        triggerHaptic([30, 40, 30]);
+        sessionStorage.setItem('sal_authenticated', '1');
+        unlockApp();
+      }
+    }
+  } catch (err) {
+    console.warn('Biometric error:', err);
+    triggerHaptic([70, 50, 70]);
+    errorEl.textContent = 'Не удалось. Введите код.';
+    setTimeout(() => { errorEl.textContent = ''; }, 2500);
+  }
+  btn.disabled = false;
+}
+
+// Physical keyboard listener for passcode entry
+window.addEventListener('keydown', (e) => {
+  const lock = document.getElementById('lockScreen');
+  if (lock.style.display === 'none' || lock.classList.contains('unlocked')) return;
+
+  if (e.key >= '0' && e.key <= '9') {
+    enterPinDigit(e.key);
+  } else if (e.key === 'Backspace') {
+    deletePinDigit();
+  } else if (e.key === 'Escape') {
+    clearPin();
+  }
+});
+
+// ========================================================
+// DATA MANAGEMENT
+// ========================================================
+let jobs = JSON.parse(localStorage.getItem('sal_jobs') || '[]');
+let entries = JSON.parse(localStorage.getItem('sal_entries') || '[]');
+let withdrawals = JSON.parse(localStorage.getItem('sal_withdrawals') || '[]');
+
+const COLORS = [
+  '#6366f1', '#10b981', '#f59e0b', '#ef4444',
+  '#ec4899', '#8b5cf6', '#06b6d4', '#14b8a6',
+  '#f97316', '#64748b', '#84cc16', '#3b82f6'
+];
+
+const MONTHS = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+const MONTHS_GEN = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+const WEEKDAYS = ['вс','пн','вт','ср','чт','пт','сб'];
+
+let currentDate = new Date();
+let selectedDate = null;
+let currentEntryType = 'plus';
+let editingEntryId = null;
+let editingJobId = null;
+let selectedJobColor = COLORS[0];
+let selectedJobIcon = AVAILABLE_ICONS[0];
+let expandedJobs = new Set();
+let selectedJobFilter = '__all__';
+
+let withdrawSelectedJobId = null;
+let expandedWithdrawals = new Set();
+
+// Clean up any test shift data
+const DEMO_ENTRY_IDS = ['e1', 'e2', 'e3', 'e4', 'e5'];
+entries = entries.filter(e => !DEMO_ENTRY_IDS.includes(e.id));
+
+// Migrate legacy emoji jobs
+jobs.forEach(j => {
+  if (!j.icon) {
+    j.icon = EMOJI_TO_ICON_MAP[j.emoji] || 'briefcase';
+  }
+});
+
+// First-time clean launch
+if (!localStorage.getItem('sal_v5_clean_ready')) {
+  entries = [];
+  if (jobs.length === 0) {
+    jobs = [
+      { id: 'job_ozon', name: 'Озон', color: '#6366f1', icon: 'package' },
+      { id: 'job_wb', name: 'ВБ', color: '#ec4899', icon: 'shopping-bag' },
+      { id: 'job_ya', name: 'Яндекс', color: '#f59e0b', icon: 'car' }
+    ];
+  }
+  localStorage.setItem('sal_v5_clean_ready', '1');
+  saveAll();
+}
+
+function saveAll() {
+  localStorage.setItem('sal_jobs', JSON.stringify(jobs));
+  localStorage.setItem('sal_entries', JSON.stringify(entries));
+  localStorage.setItem('sal_withdrawals', JSON.stringify(withdrawals));
+}
+
+function fmt(n) {
+  const v = Math.round(n || 0);
+  return v.toLocaleString('ru-RU') + ' ₽';
+}
+
+function dateKey(d) {
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+function parseKey(k) {
+  const [y,m,d] = k.split('-').map(Number);
+  return new Date(y, m-1, d);
+}
+
+function escapeHtml(s) {
+  return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function getJob(id) {
+  return jobs.find(j => j.id === id);
+}
+
+// ========================================================
+// НОВОЕ: "ДО СЕГОДНЯШНЕГО ДНЯ ВКЛЮЧИТЕЛЬНО"
+// ========================================================
+function isUpToToday(dateStr) {
+  const today = new Date();
+  today.setHours(23, 59, 59, 999);
+  const d = new Date(dateStr + 'T12:00:00');
+  return d.getTime() <= today.getTime();
+}
+
+function totalEarnedUpToToday() {
+  return entries
+    .filter(e => e.type === 'plus' && isUpToToday(e.date))
+    .reduce((s, e) => s + e.amount, 0);
+}
+
+function totalAdvUpToToday() {
+  return entries
+    .filter(e => e.type === 'minus' && isUpToToday(e.date))
+    .reduce((s, e) => s + e.amount, 0);
+}
+
+// Баланс по работам — только до сегодня (нарастающий итог)
+function getJobBalancesUpToToday() {
+  const map = {};
+  jobs.forEach(j => {
+    map[j.id] = { earned: 0, advances: 0, count: 0, advCount: 0, withdrawn: 0 };
+  });
+  map['__custom__'] = { earned: 0, advances: 0, count: 0, advCount: 0, isCustom: true, withdrawn: 0 };
+
+  const lastWithdrawByJob = {};
+  withdrawals.forEach(w => {
+    if (!lastWithdrawByJob[w.jobId] || w.timestamp > lastWithdrawByJob[w.jobId].timestamp) {
+      lastWithdrawByJob[w.jobId] = w;
+    }
+  });
+
+  entries.forEach(e => {
+    if (!isUpToToday(e.date)) return; // пропускаем будущее
+
+    const key = e.jobId || '__custom__';
+    if (!map[key]) map[key] = { earned: 0, advances: 0, count: 0, advCount: 0, withdrawn: 0 };
+
+    const lastW = lastWithdrawByJob[key];
+    const entryTime = new Date(e.date + 'T12:00:00').getTime();
+    if (lastW && entryTime <= lastW.timestamp) return;
+
+    if (e.type === 'plus') { map[key].earned += e.amount; map[key].count++; }
+    else { map[key].advances += e.amount; map[key].advCount++; }
+  });
+
+  withdrawals.forEach(w => {
+    const key = w.jobId || '__custom__';
+    if (map[key]) map[key].withdrawn = (map[key].withdrawn || 0) + w.amount;
+  });
+
+  Object.keys(map).forEach(k => {
+    map[k].balance = map[k].earned - map[k].advances;
+  });
+  return map;
+}
+
+// Полный баланс (включая будущее) — используется в календаре для сводки месяца
+function getJobBalances() {
+  const map = {};
+  jobs.forEach(j => {
+    map[j.id] = { earned: 0, advances: 0, count: 0, advCount: 0, withdrawn: 0 };
+  });
+  map['__custom__'] = { earned: 0, advances: 0, count: 0, advCount: 0, isCustom: true, withdrawn: 0 };
+
+  const lastWithdrawByJob = {};
+  withdrawals.forEach(w => {
+    if (!lastWithdrawByJob[w.jobId] || w.timestamp > lastWithdrawByJob[w.jobId].timestamp) {
+      lastWithdrawByJob[w.jobId] = w;
+    }
+  });
+
+  entries.forEach(e => {
+    const key = e.jobId || '__custom__';
+    if (!map[key]) map[key] = { earned: 0, advances: 0, count: 0, advCount: 0, withdrawn: 0 };
+
+    const lastW = lastWithdrawByJob[key];
+    const entryTime = new Date(e.date + 'T12:00:00').getTime();
+    if (lastW && entryTime <= lastW.timestamp) return;
+
+    if (e.type === 'plus') { map[key].earned += e.amount; map[key].count++; }
+    else { map[key].advances += e.amount; map[key].advCount++; }
+  });
+
+  withdrawals.forEach(w => {
+    const key = w.jobId || '__custom__';
+    if (map[key]) map[key].withdrawn = (map[key].withdrawn || 0) + w.amount;
+  });
+
+  Object.keys(map).forEach(k => {
+    map[k].balance = map[k].earned - map[k].advances;
+  });
+  return map;
+}
+
+function totalEarned() {
+  return entries.filter(e => e.type === 'plus').reduce((s, e) => s + e.amount, 0);
+}
+
+function totalAdv() {
+  return entries.filter(e => e.type === 'minus').reduce((s, e) => s + e.amount, 0);
+}
+
+// ========================================================
+// TABS NAVIGATION
+// ========================================================
+function switchTab(t) {
+  triggerHaptic(10);
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + t).classList.add('active');
+  document.querySelectorAll('.tab').forEach(x => x.classList.toggle('active', x.dataset.tab === t));
+
+  const pageTitles = {
+    'today': 'Сегодня',
+    'calendar': 'Календарь',
+    'balance': 'Баланс'
+  };
+  document.getElementById('pageMainTitle').textContent = pageTitles[t] || 'Зарплата';
+
+  if (t === 'today') renderToday();
+  if (t === 'calendar') renderCalendar();
+  if (t === 'balance') renderBalance();
+  window.scrollTo(0, 0);
+}
+
+// ========================================================
+// TODAY VIEW — нарастающий итог до сегодня
+// ========================================================
+function renderToday() {
+  const now = new Date();
+  document.getElementById('todaySub').textContent = now.toLocaleDateString('ru-RU', {
+    weekday: 'long', day: 'numeric', month: 'long'
+  });
+
+  // ⬇️ Нарастающий итог до сегодня
+  const balances = getJobBalancesUpToToday();
+  const overall = Object.values(balances).reduce((s, x) => s + x.balance, 0);
+
+  document.getElementById('heroBalance').textContent = fmt(overall);
+  document.getElementById('heroEarned').textContent = fmt(totalEarnedUpToToday());
+  document.getElementById('heroAdvance').textContent = fmt(totalAdvUpToToday());
+
+  // Mini Job balances — до сегодня
+  const miniBox = document.getElementById('miniJobs');
+  let miniHtml = jobs.map(j => {
+    const b = balances[j.id];
+    const cls = b.balance >= 0 ? 'pos' : 'neg';
+    const iconName = getJobIcon(j);
+    return `
+      <div class="jb-mini" onclick="switchTab('balance');toggleJob('${j.id}')">
+        <div class="jbm-icon" style="background:${j.color}20; color:${j.color}">
+          ${getIconSvg(iconName, 20)}
+        </div>
+        <div class="jbm-info">
+          <div class="jbm-name">${escapeHtml(j.name)}</div>
+          <div class="jbm-sub">${b.count} смен · ${b.advCount} аванс</div>
+        </div>
+        <div class="jbm-val ${cls}">${fmt(b.balance)}</div>
+      </div>
+    `;
+  }).join('');
+
+  const custom = balances['__custom__'];
+  if (custom && (custom.count > 0 || custom.advCount > 0)) {
+    const cls = custom.balance >= 0 ? 'pos' : 'neg';
+    miniHtml += `
+      <div class="jb-mini" onclick="switchTab('balance')">
+        <div class="jbm-icon" style="background:#64748b20; color:#64748b">
+          ${getIconSvg('briefcase', 20)}
+        </div>
+        <div class="jbm-info">
+          <div class="jbm-name">Другое</div>
+          <div class="jbm-sub">${custom.count} смен · ${custom.advCount} аванс</div>
+        </div>
+        <div class="jbm-val ${cls}">${fmt(custom.balance)}</div>
+      </div>
+    `;
+  }
+
+  if (!miniHtml) {
+    miniHtml = `
+      <div class="empty-card">
+        <div class="empty-icon">${getIconSvg('briefcase', 24)}</div>
+        <div class="empty-txt">Нет добавленных мест работы</div>
+        <button class="empty-btn" onclick="openJobModal()">
+          ${getIconSvg('package', 15)} Добавить работу
+        </button>
+      </div>
+    `;
+  }
+  miniBox.innerHTML = miniHtml;
+
+  // Next shift
+  const today = new Date(); today.setHours(0,0,0,0);
+  const todayKey = dateKey(today);
+  const upcoming = entries
+    .filter(e => e.type === 'plus' && e.date >= todayKey)
+    .sort((a,b) => a.date.localeCompare(b.date));
+
+  const box = document.getElementById('nextShiftBox');
+  if (!upcoming.length) {
+    box.innerHTML = `
+      <div class="empty-card">
+        <div class="empty-icon">${getIconSvg('calendar', 24)}</div>
+        <div class="empty-txt">Нет запланированных смен.<br>Нажмите кнопку ниже или «+», чтобы добавить смену</div>
+        <button class="empty-btn" onclick="openEntryModal()">
+          ${getIconSvg('calendar', 15)} Добавить смену
+        </button>
+      </div>
+    `;
+  } else {
+    const e = upcoming[0];
+    const job = getJob(e.jobId);
+    const color = job ? job.color : '#64748b';
+    const iconName = getJobIcon(job);
+    const d = parseKey(e.date);
+    const diffDays = Math.round((d - today) / 86400000);
+    let countdown;
+    if (diffDays === 0) countdown = 'Сегодня';
+    else if (diffDays === 1) countdown = 'Завтра';
+    else if (diffDays === 2) countdown = 'Послезавтра';
+    else countdown = 'Через ' + diffDays + ' дн.';
+
+    box.innerHTML = `
+      <div class="next-shift" style="border-left: 5px solid ${color};" onclick="editEntry('${e.id}')">
+        <div class="next-shift-top">
+          <span class="badge" style="background:${color}22; color:${color};">
+            ${getIconSvg(iconName, 15)}
+            ${escapeHtml(job ? job.name : (e.customName || 'Другое'))}
+          </span>
+          <span class="countdown">
+            ${getIconSvg('clock', 13)}
+            ${countdown}
+          </span>
+        </div>
+        <div class="shift-name">${d.getDate()} ${MONTHS_GEN[d.getMonth()]}, ${WEEKDAYS[d.getDay()]}</div>
+        <div class="shift-date">${e.note ? escapeHtml(e.note) : 'Рабочая смена'}</div>
+        <div class="shift-sum">+${fmt(e.amount)}</div>
+      </div>
+    `;
+  }
+
+  // Upcoming shifts
+  const list = document.getElementById('upcomingList');
+  const rest = upcoming.slice(1, 7);
+  if (!rest.length) {
+    list.innerHTML = `
+      <div class="empty-card" style="padding: 18px;">
+        <div class="empty-txt">Больше запланированных смен нет</div>
+      </div>
+    `;
+  } else {
+    list.innerHTML = rest.map(e => {
+      const d = parseKey(e.date);
+      const job = getJob(e.jobId);
+      const color = job ? job.color : '#64748b';
+      const label = job ? job.name : (e.customName || 'Другое');
+      const iconName = getJobIcon(job);
+      return `
+        <div class="shift-item" onclick="editEntry('${e.id}')">
+          <div class="shift-color-bar" style="background:${color}"></div>
+          <div class="shift-icon-badge" style="background:${color}20; color:${color}">
+            ${getIconSvg(iconName, 20)}
+          </div>
+          <div class="shift-info">
+            <div class="name">${escapeHtml(label)}</div>
+            <div class="sub">${d.getDate()} ${MONTHS_GEN[d.getMonth()]}, ${WEEKDAYS[d.getDay()]}${e.note ? ' · ' + escapeHtml(e.note) : ''}</div>
+          </div>
+          <div class="shift-amount">+${fmt(e.amount)}</div>
+        </div>
+      `;
+    }).join('');
+  }
+}
+
+// ========================================================
+// CALENDAR VIEW — сводка месяца БЕЗ правки 5 (весь видимый месяц)
+// ========================================================
+function renderCalendarJobFilters() {
+  const bar = document.getElementById('calendarJobFilter');
+  if (!bar) return;
+
+  let html = `
+    <button class="job-filter-chip ${selectedJobFilter === '__all__' ? 'active' : ''}" onclick="setCalendarFilter('__all__')">
+      Все работы
+    </button>
+  `;
+
+  jobs.forEach(j => {
+    html += `
+      <button class="job-filter-chip ${selectedJobFilter === j.id ? 'active' : ''}" onclick="setCalendarFilter('${j.id}')">
+        ${getIconSvg(getJobIcon(j), 14)}
+        ${escapeHtml(j.name)}
+      </button>
+    `;
+  });
+
+  bar.innerHTML = html;
+}
+
+function setCalendarFilter(filterId) {
+  triggerHaptic(10);
+  selectedJobFilter = filterId;
+  renderCalendarJobFilters();
+  renderCalendar();
+}
+
+function renderCalendar() {
+  renderCalendarJobFilters();
+
+  const y = currentDate.getFullYear(), m = currentDate.getMonth();
+  document.getElementById('monthTitle').textContent = MONTHS[m] + ' ' + y;
+
+  const first = new Date(y, m, 1);
+  const startDay = (first.getDay() + 6) % 7;
+  const daysInMonth = new Date(y, m+1, 0).getDate();
+  const today = new Date(); today.setHours(0,0,0,0);
+
+  const container = document.getElementById('days');
+  container.innerHTML = '';
+
+  for (let i=0; i<startDay; i++) {
+    const el = document.createElement('div');
+    el.className = 'day empty';
+    container.appendChild(el);
+  }
+
+  let monthEarned = 0, monthAdv = 0, monthCount = 0;
+
+  for (let d=1; d<=daysInMonth; d++) {
+    const date = new Date(y, m, d);
+    const key = dateKey(date);
+    const el = document.createElement('div');
+    el.className = 'day';
+    if (date.getTime() === today.getTime()) el.classList.add('today');
+    if (key === selectedDate) el.classList.add('selected');
+
+    let dayEntries = entries.filter(e => e.date === key);
+    if (selectedJobFilter !== '__all__') {
+      dayEntries = dayEntries.filter(e => e.jobId === selectedJobFilter);
+    }
+
+    if (dayEntries.length) el.classList.add('has-event');
+
+    // ⚠️ Правка 5 НЕ применена — считаем весь видимый месяц (включая будущее)
+    dayEntries.forEach(e => {
+      if (e.type === 'plus') { monthEarned += e.amount; monthCount++; }
+      else monthAdv += e.amount;
+    });
+
+    let dotsHtml = '';
+    if (dayEntries.length) {
+      const dots = dayEntries.slice(0,3).map(e => {
+        const job = getJob(e.jobId);
+        const c = job ? job.color : (e.type === 'minus' ? '#f43f5e' : '#64748b');
+        return `<span class="dot" style="background:${c}"></span>`;
+      }).join('');
+      dotsHtml = `<div class="dots">${dots}</div>`;
+    }
+
+    el.innerHTML = `<span class="daynum">${d}</span>${dotsHtml}`;
+    el.onclick = () => {
+      triggerHaptic(10);
+      selectedDate = key;
+      renderCalendar();
+      showDayDetail(key);
+    };
+    container.appendChild(el);
+  }
+
+  document.getElementById('msCount').textContent = monthCount;
+  document.getElementById('msEarned').textContent = fmt(monthEarned);
+  document.getElementById('msAdv').textContent = fmt(monthAdv);
+
+  if (selectedDate) showDayDetail(selectedDate);
+  else document.getElementById('dayDetail').classList.remove('show');
+}
+
+function showDayDetail(key) {
+  const panel = document.getElementById('dayDetail');
+  panel.classList.add('show');
+  const d = parseKey(key);
+  document.getElementById('detailDate').textContent = 
+    `${d.getDate()} ${MONTHS_GEN[d.getMonth()]} ${d.getFullYear()}`;
+
+  let dayEntries = entries.filter(e => e.date === key);
+  if (selectedJobFilter !== '__all__') {
+    dayEntries = dayEntries.filter(e => e.jobId === selectedJobFilter);
+  }
+
+  const box = document.getElementById('detailEntries');
+
+  if (!dayEntries.length) {
+    box.innerHTML = '<div class="empty-state" style="color:var(--muted);font-size:13px;text-align:center;padding:16px 0;">Записей нет. Нажми «Добавить» или «+»</div>';
+    return;
+  }
+
+  box.innerHTML = dayEntries.map(e => {
+    const job = getJob(e.jobId);
+    const label = job ? job.name : (e.customName || 'Другое');
+    const color = job ? job.color : '#64748b';
+    const iconName = getJobIcon(job);
+    return `
+      <div class="entry ${e.type==='minus'?'minus':''}" onclick="editEntry('${e.id}')" style="border-left-color:${e.type==='minus'?'var(--red)':color}">
+        <div class="entry-left">
+          <div class="entry-icon" style="background:${color}22; color:${color}">
+            ${getIconSvg(iconName, 20)}
+          </div>
+          <div class="info">
+            <div class="name">${escapeHtml(label)}</div>
+            <div class="type">${e.type==='plus'?'Смена':'Аванс'}${e.note?' · '+escapeHtml(e.note):''}</div>
+          </div>
+        </div>
+        <div class="sum">${e.type==='plus'?'+':'−'}${fmt(e.amount)}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function changeMonth(dir) {
+  triggerHaptic(10);
+  currentDate.setMonth(currentDate.getMonth() + dir);
+  selectedDate = null;
+  renderCalendar();
+}
+
+// ========================================================
+// BALANCE VIEW — нарастающий итог до сегодня
+// ========================================================
+function renderBalance() {
+  // Только прошедшие/сегодняшние записи
+  const pastPlus = entries.filter(e => e.type === 'plus' && isUpToToday(e.date));
+  const pastMinus = entries.filter(e => e.type === 'minus' && isUpToToday(e.date));
+
+  document.getElementById('statEarned').textContent = fmt(totalEarnedUpToToday());
+  document.getElementById('statCount').textContent = pastPlus.length + ' смен';
+  document.getElementById('statAdv').textContent = fmt(totalAdvUpToToday());
+  document.getElementById('statAdvCount').textContent = pastMinus.length + ' операций';
+
+  const balances = getJobBalancesUpToToday();
+  const overall = Object.values(balances).reduce((s, x) => s + x.balance, 0);
+  document.getElementById('statNet').textContent = fmt(overall);
+
+  const avg = pastPlus.length ? pastPlus.reduce((s, e) => s + e.amount, 0) / pastPlus.length : 0;
+  document.getElementById('statAvg').textContent = fmt(avg);
+
+  renderArchive();
+
+  const box = document.getElementById('jobBalancesFull');
+  let html = '';
+
+  jobs.forEach(j => {
+    const b = balances[j.id];
+    const isOpen = expandedJobs.has(j.id);
+    const cls = b.balance >= 0 ? 'pos' : 'neg';
+    const iconName = getJobIcon(j);
+    html += `
+      <div class="job-bal-card">
+        <div class="jbc-head ${isOpen?'open':''}" onclick="toggleJob('${j.id}')">
+          <div class="jbc-icon" style="background:${j.color}20; color:${j.color}">
+            ${getIconSvg(iconName, 22)}
+          </div>
+          <div class="jbc-info">
+            <div class="jbc-name">${escapeHtml(j.name)}</div>
+            <div class="jbc-meta">${b.count} смен · ${b.advCount} аванс${b.withdrawn ? ' · выведено ' + fmt(b.withdrawn) : ''}</div>
+          </div>
+          <div class="jbc-right">
+            <div class="jbc-balance ${cls}">
+              ${fmt(b.balance)}
+              <span class="jbc-arrow">${getIconSvg('chevron-down', 16)}</span>
+            </div>
+          </div>
+        </div>
+        <div class="jbc-body ${isOpen?'open':''}">
+          <div class="jbc-rows">
+            <div class="jbc-row"><span class="k">Отработано до сегодня</span><span class="v pos">+${fmt(b.earned)}</span></div>
+            <div class="jbc-row"><span class="k">Авансов до сегодня</span><span class="v neg">−${fmt(b.advances)}</span></div>
+            ${b.withdrawn ? `<div class="jbc-row"><span class="k">Выведено за всё время</span><span class="v" style="color:var(--accent-light)">${fmt(b.withdrawn)}</span></div>` : ''}
+            <div class="jbc-row total"><span class="k"><b>Баланс на сегодня</b></span><span class="v ${cls}">${fmt(b.balance)}</span></div>
+          </div>
+          <div class="jbc-actions">
+            <button class="jbc-action plus" onclick="event.stopPropagation();openEntryModalForJob('${j.id}','plus')">
+              ${getIconSvg('check', 14)} + Смена
+            </button>
+            <button class="jbc-action minus" onclick="event.stopPropagation();openEntryModalForJob('${j.id}','minus')">
+              − Аванс
+            </button>
+          </div>
+          <button class="jbc-schedule-btn" onclick="event.stopPropagation();openJobModal('${j.id}')">
+            ${getIconSvg('edit', 14)} Редактировать
+          </button>
+        </div>
+      </div>
+    `;
+  });
+
+  const custom = balances['__custom__'];
+  if (custom && (custom.count > 0 || custom.advCount > 0)) {
+    const cls = custom.balance >= 0 ? 'pos' : 'neg';
+    html += `
+      <div class="job-bal-card">
+        <div class="jbc-head ${expandedJobs.has('__custom__')?'open':''}" onclick="toggleJob('__custom__')">
+          <div class="jbc-icon" style="background:#64748b20; color:#64748b">${getIconSvg('briefcase', 22)}</div>
+          <div class="jbc-info">
+            <div class="jbc-name">Другое</div>
+            <div class="jbc-meta">${custom.count} смен · ${custom.advCount} аванс${custom.withdrawn ? ' · выведено ' + fmt(custom.withdrawn) : ''}</div>
+          </div>
+          <div class="jbc-right">
+            <div class="jbc-balance ${cls}">
+              ${fmt(custom.balance)}
+              <span class="jbc-arrow">${getIconSvg('chevron-down', 16)}</span>
+            </div>
+          </div>
+        </div>
+        <div class="jbc-body ${expandedJobs.has('__custom__')?'open':''}">
+          <div class="jbc-rows">
+            <div class="jbc-row"><span class="k">Отработано до сегодня</span><span class="v pos">+${fmt(custom.earned)}</span></div>
+            <div class="jbc-row"><span class="k">Авансов до сегодня</span><span class="v neg">−${fmt(custom.advances)}</span></div>
+            ${custom.withdrawn ? `<div class="jbc-row"><span class="k">Выведено</span><span class="v" style="color:var(--accent-light)">${fmt(custom.withdrawn)}</span></div>` : ''}
+            <div class="jbc-row total"><span class="k"><b>Баланс на сегодня</b></span><span class="v ${cls}">${fmt(custom.balance)}</span></div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  box.innerHTML = html;
+
+  // История операций (полная — все записи, включая будущие — так удобнее видеть план)
+  const sorted = [...entries].sort((a,b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id));
+  const txBox = document.getElementById('txList');
+  if (!sorted.length) {
+    txBox.innerHTML = '<div class="empty-card" style="margin: 0; padding: 24px;"><div class="empty-txt">Пока нет операций</div></div>';
+  } else {
+    txBox.innerHTML = sorted.slice(0, 20).map(e => {
+      const d = parseKey(e.date);
+      const job = getJob(e.jobId);
+      const label = job ? job.name : (e.customName || 'Другое');
+      const iconName = getJobIcon(job);
+      const color = job ? job.color : '#64748b';
+      const isFuture = !isUpToToday(e.date);
+      return `
+        <div class="tx-item" onclick="editEntry('${e.id}')" style="${isFuture ? 'opacity:0.55' : ''}">
+          <div class="tx-icon ${e.type}" style="background:${color}20; color:${color}">
+            ${getIconSvg(iconName, 20)}
+          </div>
+          <div class="tx-info">
+            <div class="tn">${escapeHtml(label)}${isFuture ? ' <span style="font-size:10px;color:var(--muted);font-weight:600;">· будущее</span>' : ''}</div>
+            <div class="td">${d.getDate()} ${MONTHS_GEN[d.getMonth()]}${e.note?' · '+escapeHtml(e.note):''}</div>
+          </div>
+          <div class="tx-amt ${e.type}">${e.type==='plus'?'+':'−'}${fmt(e.amount)}</div>
+        </div>
+      `;
+    }).join('');
+  }
+}
+
+// ===== Отрисовка архива выводов =====
+function renderArchive() {
+  const section = document.getElementById('archiveSection');
+  if (!section) return;
+
+  if (!withdrawals.length) {
+    section.innerHTML = '';
+    return;
+  }
+
+  const sorted = [...withdrawals].sort((a, b) => b.timestamp - a.timestamp);
+
+  let html = `
+    <div class="section-title">
+      <span>Архив выводов</span>
+      <span style="font-size:12px;color:var(--muted);font-weight:600;text-transform:none;letter-spacing:0;">${withdrawals.length} шт · ${fmt(withdrawals.reduce((s,w)=>s+w.amount,0))}</span>
+    </div>
+    <div class="archive-list">
+  `;
+
+  sorted.forEach(w => {
+    const job = getJob(w.jobId);
+    const label = job ? job.name : 'Другое';
+    const color = job ? job.color : '#64748b';
+    const iconName = getJobIcon(job);
+    const d = parseKey(w.date);
+    const isOpen = expandedWithdrawals.has(w.id);
+    const netAtWithdraw = w.earnedBefore - w.advancesBefore;
+
+    html += `
+      <div class="archive-card ${isOpen?'open':''}">
+        <div class="archive-head" onclick="toggleWithdrawal('${w.id}')">
+          <div class="archive-icon" style="background:${color}20; color:${color}">
+            ${getIconSvg(iconName, 22)}
+          </div>
+          <div class="archive-info">
+            <div class="archive-title">${escapeHtml(label)}</div>
+            <div class="archive-meta">${d.getDate()} ${MONTHS_GEN[d.getMonth()]} ${d.getFullYear()}</div>
+          </div>
+          <div class="archive-amount">${fmt(w.amount)}</div>
+          <span class="archive-arrow">${getIconSvg('chevron-down', 16)}</span>
+        </div>
+        <div class="archive-body">
+          <div class="archive-rows">
+            <div class="archive-row"><span class="k">Заработано до вывода</span><span class="v pos">+${fmt(w.earnedBefore)}</span></div>
+            <div class="archive-row"><span class="k">Авансов до вывода</span><span class="v neg">−${fmt(w.advancesBefore)}</span></div>
+            <div class="archive-row"><span class="k">Чистый баланс на момент вывода</span><span class="v ${netAtWithdraw>=0?'pos':'neg'}">${fmt(netAtWithdraw)}</span></div>
+            <div class="archive-row"><span class="k">Смен за период</span><span class="v">${w.entryIds ? w.entryIds.length : 0}</span></div>
+            <div class="archive-row total"><span class="k"><b>Выведено</b></span><span class="v" style="color:var(--accent-light)">${fmt(w.amount)}</span></div>
+          </div>
+          ${w.entryIds && w.entryIds.length ? `
+            <div class="archive-breakdown">
+              <div class="archive-breakdown-title">Детализация периода</div>
+              ${w.entryIds.map(eid => {
+                const e = entries.find(x => x.id === eid);
+                if (!e) return '';
+                const ed = parseKey(e.date);
+                return `
+                  <div class="archive-entry-mini">
+                    <span class="em-date">${ed.getDate()} ${MONTHS_GEN[ed.getMonth()]}${e.note ? ' · ' + escapeHtml(e.note) : ''}</span>
+                    <span class="em-amt ${e.type}">${e.type==='plus'?'+':'−'}${fmt(e.amount)}</span>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          ` : ''}
+        </div>
+      </div>
+    `;
+  });
+
+  html += '</div>';
+  section.innerHTML = html;
+}
+
+function toggleWithdrawal(id) {
+  triggerHaptic(10);
+  if (expandedWithdrawals.has(id)) expandedWithdrawals.delete(id);
+  else expandedWithdrawals.add(id);
+  renderArchive();
+}
+
+function toggleJob(id) {
+  triggerHaptic(10);
+  if (expandedJobs.has(id)) expandedJobs.delete(id);
+  else expandedJobs.add(id);
+  renderBalance();
+}
+
+// ========================================================
+// WITHDRAW MODAL
+// ========================================================
+function openWithdrawModal() {
+  triggerHaptic(15);
+  withdrawSelectedJobId = null;
+  document.getElementById('withdrawAmount').value = '';
+  renderWithdrawJobList();
+  document.getElementById('withdrawModalBg').classList.add('show');
+}
+
+function closeWithdrawModal() {
+  document.getElementById('withdrawModalBg').classList.remove('show');
+}
+
+function renderWithdrawJobList() {
+  const box = document.getElementById('withdrawJobList');
+  const balances = getJobBalancesUpToToday();
+  let html = '';
+
+  jobs.forEach(j => {
+    const b = balances[j.id];
+    const iconName = getJobIcon(j);
+    const isActive = withdrawSelectedJobId === j.id;
+    html += `
+      <div class="wj-item ${isActive?'active':''}" onclick="selectWithdrawJob('${j.id}')">
+        <div class="wj-icon" style="background:${j.color}22; color:${j.color}">
+          ${getIconSvg(iconName, 20)}
+        </div>
+        <div class="wj-info">
+          <div class="wj-name">${escapeHtml(j.name)}</div>
+          <div class="wj-bal">Баланс: <span style="color:${b.balance>=0?'var(--green)':'var(--red)'};font-weight:800;">${fmt(b.balance)}</span></div>
+        </div>
+        <div class="wj-check">${getIconSvg('check', 14)}</div>
+      </div>
+    `;
+  });
+
+  const custom = balances['__custom__'];
+  if (custom && (custom.count > 0 || custom.advCount > 0 || custom.withdrawn)) {
+    const isActive = withdrawSelectedJobId === '__custom__';
+    html += `
+      <div class="wj-item ${isActive?'active':''}" onclick="selectWithdrawJob('__custom__')">
+        <div class="wj-icon" style="background:#64748b22; color:#64748b">
+          ${getIconSvg('briefcase', 20)}
+        </div>
+        <div class="wj-info">
+          <div class="wj-name">Другое</div>
+          <div class="wj-bal">Баланс: <span style="color:${custom.balance>=0?'var(--green)':'var(--red)'};font-weight:800;">${fmt(custom.balance)}</span></div>
+        </div>
+        <div class="wj-check">${getIconSvg('check', 14)}</div>
+      </div>
+    `;
+  }
+
+  if (!html) {
+    html = '<div style="text-align:center;color:var(--muted);padding:20px;font-size:14px;">Нет мест работы для вывода</div>';
+  }
+
+  box.innerHTML = html;
+}
+
+function selectWithdrawJob(jobId) {
+  triggerHaptic(10);
+  withdrawSelectedJobId = jobId;
+  renderWithdrawJobList();
+}
+
+function setWithdrawAmount(amount) {
+  document.getElementById('withdrawAmount').value = amount;
+}
+
+function setWithdrawFull() {
+  if (!withdrawSelectedJobId) {
+    alert('Сначала выберите работу');
+    return;
+  }
+  const balances = getJobBalancesUpToToday();
+  const b = balances[withdrawSelectedJobId];
+  if (!b) return;
+  document.getElementById('withdrawAmount').value = Math.max(0, b.balance);
+}
+
+function saveWithdraw() {
+  if (!withdrawSelectedJobId) {
+    alert('Выберите работу');
+    return;
+  }
+  const amount = parseFloat(document.getElementById('withdrawAmount').value);
+  if (!amount || amount <= 0) {
+    alert('Введите сумму больше нуля');
+    return;
+  }
+
+  const balances = getJobBalancesUpToToday();
+  const b = balances[withdrawSelectedJobId];
+  if (!b) {
+    alert('Работа не найдена');
+    return;
+  }
+
+  if (amount > b.balance && b.balance > 0) {
+    if (!confirm(`Сумма больше текущего баланса (${fmt(b.balance)}). Продолжить?`)) return;
+  }
+
+  const lastWithdrawByJob = withdrawals
+    .filter(w => w.jobId === withdrawSelectedJobId)
+    .sort((a, b) => b.timestamp - a.timestamp)[0];
+
+  const relevantEntryIds = entries
+    .filter(e => (e.jobId || '__custom__') === withdrawSelectedJobId)
+    .filter(e => {
+      const entryTime = new Date(e.date + 'T12:00:00').getTime();
+      return !lastWithdrawByJob || entryTime > lastWithdrawByJob.timestamp;
+    })
+    .map(e => e.id);
+
+  const now = new Date();
+  const withdrawal = {
+    id: 'w_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+    date: dateKey(now),
+    timestamp: now.getTime(),
+    jobId: withdrawSelectedJobId,
+    amount: amount,
+    earnedBefore: b.earned,
+    advancesBefore: b.advances,
+    entryIds: relevantEntryIds
+  };
+
+  withdrawals.push(withdrawal);
+  saveAll();
+  closeWithdrawModal();
+  refreshAll();
+
+  showToast(`Выведено ${fmt(amount)}. Баланс работы обнулён.`);
+}
+
+function showToast(msg) {
+  let toast = document.getElementById('appToast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'appToast';
+    toast.style.cssText = `
+      position: fixed;
+      bottom: calc(110px + env(safe-area-inset-bottom));
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: rgba(16, 185, 129, 0.95);
+      color: #fff;
+      padding: 14px 22px;
+      border-radius: 16px;
+      font-size: 14px;
+      font-weight: 700;
+      z-index: 9999;
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+      max-width: 90vw;
+      text-align: center;
+      pointer-events: none;
+    `;
+    document.body.appendChild(toast);
+  }
+  toast.textContent = msg;
+  requestAnimationFrame(() => {
+    toast.style.opacity = '1';
+    toast.style.transform = 'translateX(-50%) translateY(0)';
+  });
+  clearTimeout(toast._timeout);
+  toast._timeout = setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateX(-50%) translateY(20px)';
+  }, 2800);
+}
+
+// ========================================================
+// ENTRY MODAL
+// ========================================================
+function openEntryModalForJob(jobId, type) {
+  openEntryModal();
+  document.getElementById('inpJob').value = jobId;
+  setEntryType(type);
+  onJobChange();
+}
+
+function openEntryModal(date) {
+  editingEntryId = null;
+  document.getElementById('entryModalTitle').textContent = 'Новая запись';
+  document.getElementById('inpDate').value = date || selectedDate || dateKey(new Date());
+  document.getElementById('inpCustomName').value = '';
+  document.getElementById('inpAmount').value = '';
+  document.getElementById('inpNote').value = '';
+  document.getElementById('btnDeleteEntry').style.display = 'none';
+  setEntryType('plus');
+  populateJobSelect(null);
+  onJobChange();
+  document.getElementById('entryModalBg').classList.add('show');
+}
+
+function populateJobSelect(selectedId) {
+  const sel = document.getElementById('inpJob');
+  let html = jobs.map(j => 
+    `<option value="${j.id}" ${j.id===selectedId?'selected':''}>${escapeHtml(j.name)}</option>`
+  ).join('');
+  html += `<option value="__custom__">Своё описание (без привязки)</option>`;
+  html += `<option value="__new__">+ Новое место работы</option>`;
+  sel.innerHTML = html;
+  if (selectedId) sel.value = selectedId;
+  else if (!jobs.length) sel.value = '__custom__';
+}
+
+function onJobChange() {
+  const sel = document.getElementById('inpJob');
+  const v = sel.value;
+  const field = document.getElementById('customNameField');
+  if (v === '__custom__') {
+    field.style.display = 'block';
+  } else if (v === '__new__') {
+    field.style.display = 'none';
+    closeEntryModal();
+    openJobModal();
+  } else {
+    field.style.display = 'none';
+  }
+}
+
+function setEntryType(t) {
+  currentEntryType = t;
+  document.getElementById('btnPlus').classList.toggle('active', t==='plus');
+  document.getElementById('btnMinus').classList.toggle('active', t==='minus');
+  document.getElementById('btnMinus').classList.toggle('minus', t==='minus');
+}
+
+function closeEntryModal() {
+  document.getElementById('entryModalBg').classList.remove('show');
+}
+
+function setQuickDate(offset) {
+  const d = new Date();
+  d.setDate(d.getDate() + offset);
+  document.getElementById('inpDate').value = dateKey(d);
+}
+
+function setQuickAmount(val) {
+  document.getElementById('inpAmount').value = val;
+}
+
+function adjustAmount(delta) {
+  const inp = document.getElementById('inpAmount');
+  const cur = parseFloat(inp.value) || 0;
+  inp.value = Math.max(0, cur + delta);
+}
+
+function editEntry(id) {
+  const e = entries.find(x => x.id === id);
+  if (!e) return;
+  editingEntryId = id;
+  document.getElementById('entryModalTitle').textContent = 'Редактировать';
+  document.getElementById('inpDate').value = e.date;
+  document.getElementById('inpAmount').value = e.amount;
+  document.getElementById('inpNote').value = e.note || '';
+  document.getElementById('btnDeleteEntry').style.display = 'block';
+  setEntryType(e.type);
+
+  populateJobSelect(e.jobId);
+  if (e.jobId) {
+    document.getElementById('inpJob').value = e.jobId;
+  } else {
+    document.getElementById('inpJob').value = '__custom__';
+    document.getElementById('inpCustomName').value = e.customName || '';
+  }
+  onJobChange();
+  document.getElementById('entryModalBg').classList.add('show');
+}
+
+function saveEntry() {
+  const date = document.getElementById('inpDate').value;
+  const jobVal = document.getElementById('inpJob').value;
+  const amount = parseFloat(document.getElementById('inpAmount').value);
+  const note = document.getElementById('inpNote').value.trim();
+
+  if (!date || !amount || amount <= 0) { alert('Заполни дату и сумму'); return; }
+
+  let jobId = null, customName = '';
+  if (jobVal === '__custom__') {
+    customName = document.getElementById('inpCustomName').value.trim();
+    if (!customName) customName = 'Другое';
+  } else if (jobVal === '__new__') {
+    alert('Сначала создай место работы'); return;
+  } else {
+    jobId = jobVal;
+  }
+
+  if (editingEntryId) {
+    const e = entries.find(x => x.id === editingEntryId);
+    Object.assign(e, { date, jobId, customName, amount, type: currentEntryType, note });
+  } else {
+    entries.push({
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2,6),
+      date, jobId, customName, amount, type: currentEntryType, note
+    });
+  }
+  saveAll();
+  selectedDate = date;
+  closeEntryModal();
+  refreshAll();
+}
+
+function deleteEntry() {
+  if (!editingEntryId || !confirm('Удалить запись?')) return;
+  entries = entries.filter(x => x.id !== editingEntryId);
+  saveAll();
+  closeEntryModal();
+  refreshAll();
+}
+
+// ========================================================
+// JOB MODAL
+// ========================================================
+function openJobModal(id) {
+  editingJobId = id || null;
+  document.getElementById('jobModalTitle').textContent = id ? 'Редактировать' : 'Новое место работы';
+  
+  const j = id ? getJob(id) : null;
+  document.getElementById('jobName').value = j ? j.name : '';
+  selectedJobColor = j ? j.color : COLORS[0];
+  selectedJobIcon = j && j.icon ? j.icon : AVAILABLE_ICONS[0];
+  document.getElementById('btnDeleteJob').style.display = id ? 'block' : 'none';
+
+  renderColorGrid();
+  renderIconGrid();
+  document.getElementById('jobModalBg').classList.add('show');
+}
+
+function renderColorGrid() {
+  document.getElementById('colorGrid').innerHTML = COLORS.map(c =>
+    `<div class="color-swatch ${c===selectedJobColor?'active':''}" 
+      style="background:${c}" onclick="pickColor('${c}')"></div>`
+  ).join('');
+}
+
+function renderIconGrid() {
+  document.getElementById('iconGrid').innerHTML = AVAILABLE_ICONS.map(ic =>
+    `<button class="icon-btn-choice ${ic===selectedJobIcon?'active':''}" 
+      onclick="pickIcon('${ic}')">${getIconSvg(ic, 22)}</button>`
+  ).join('');
+}
+
+function pickColor(c) { selectedJobColor = c; renderColorGrid(); }
+function pickIcon(i) { selectedJobIcon = i; renderIconGrid(); }
+function closeJobModal() { document.getElementById('jobModalBg').classList.remove('show'); }
+
+function saveJob() {
+  const name = document.getElementById('jobName').value.trim();
+  if (!name) { alert('Введи название'); return; }
+
+  if (editingJobId) {
+    const j = getJob(editingJobId);
+    j.name = name; j.color = selectedJobColor; j.icon = selectedJobIcon;
+  } else {
+    jobs.push({
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2,6),
+      name, color: selectedJobColor, icon: selectedJobIcon
+    });
+  }
+  saveAll();
+  closeJobModal();
+  refreshAll();
+}
+
+function deleteJob() {
+  if (!editingJobId) return;
+  if (!confirm('Удалить место работы? Записи останутся как «Другое».')) return;
+  entries.forEach(e => { if (e.jobId === editingJobId) e.jobId = null; });
+  jobs = jobs.filter(j => j.id !== editingJobId);
+  expandedJobs.delete(editingJobId);
+  saveAll();
+  closeJobModal();
+  refreshAll();
+}
+
+// ========================================================
+// REFRESH
+// ========================================================
+function refreshAll() {
+  const active = document.querySelector('.tab.active').dataset.tab;
+  if (active === 'today') renderToday();
+  if (active === 'calendar') renderCalendar();
+  if (active === 'balance') renderBalance();
+}
+
+// ========================================================
+// АКТУАЛЬНОСТЬ ДАТ (без перезапуска приложения)
+// ========================================================
+function refreshDates() {
+  // Если приложение разблокировано — перерисовываем активную вкладку.
+  if (document.getElementById('app-root').style.display === 'block') {
+    refreshAll();
+  }
+}
+
+// При возврате в приложение (вкладку / PWA) — пересчитываем даты
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) refreshDates();
+});
+window.addEventListener('focus', refreshDates);
+window.addEventListener('pageshow', refreshDates);
+
+// Автообновление в полночь (смена дня 15 → 16 без перезапуска)
+function scheduleMidnightRefresh() {
+  const now = new Date();
+  const next = new Date(now);
+  next.setHours(24, 0, 5, 0); // 00:00:05 следующего дня
+  const ms = next - now;
+  setTimeout(() => {
+    refreshDates();
+    scheduleMidnightRefresh(); // перепланируем на следующие сутки
+  }, ms);
+}
+scheduleMidnightRefresh();
+
+// ========================================================
+// STARTUP
+// ========================================================
+renderToday();
+updateOnlineStatus();
+
+if (sessionStorage.getItem('sal_authenticated') === '1') {
+  unlockApp();
+}
+
+if (localStorage.getItem('sal_cred_id')) {
+  document.getElementById('faceidWrap').style.display = 'flex';
+}
+</script>
+</body>
+</html>
